@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Campaign Analytics Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:wght@400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="dashboard">
+      <aside class="sidebar">
+        <div class="sidebar__brand">
+          <div class="logo">C</div>
+          <div>
+            <p class="brand-title">Campaigns</p>
+            <span class="brand-subtitle">Management</span>
+          </div>
+        </div>
+        <button class="sidebar__create">
+          <span class="material-symbols-outlined"> add_circle </span>
+          New Campaign
+        </button>
+        <nav class="sidebar__menu">
+          <p class="sidebar__section">Menu</p>
+          <a class="active" href="#">
+            <span class="material-symbols-outlined"> dashboard </span>
+            Dashboard
+          </a>
+          <a href="#">
+            <span class="material-symbols-outlined"> play_circle </span>
+            Campaigns
+          </a>
+          <a href="#">
+            <span class="material-symbols-outlined"> groups </span>
+            Influencers
+          </a>
+          <a href="#">
+            <span class="material-symbols-outlined"> bar_chart </span>
+            Analytics
+          </a>
+          <a href="#">
+            <span class="material-symbols-outlined"> folder_open </span>
+            Library
+          </a>
+        </nav>
+        <div class="sidebar__menu">
+          <p class="sidebar__section">Teams</p>
+          <a href="#">
+            <span class="status status--blue"></span>
+            Blue Chips
+          </a>
+          <a href="#">
+            <span class="status status--green"></span>
+            Retail Boosters
+          </a>
+          <a href="#">
+            <span class="status status--purple"></span>
+            Growth Labs
+          </a>
+        </div>
+        <div class="sidebar__upgrade">
+          <p>Become Pro Access</p>
+          <span>Unlock advanced analytics</span>
+          <button>Upgrade now</button>
+        </div>
+      </aside>
+      <main class="content">
+        <header class="topbar">
+          <div class="topbar__left">
+            <div class="campaign-chip">Blue Chips Chicago</div>
+            <div class="platform-tabs">
+              <button class="active">TikTok</button>
+              <button>Instagram</button>
+              <button>Youtube</button>
+            </div>
+          </div>
+          <div class="topbar__right">
+            <div class="search">
+              <span class="material-symbols-outlined"> search </span>
+              <input type="text" placeholder="Search something..." />
+            </div>
+            <button class="icon-button">
+              <span class="material-symbols-outlined"> notifications </span>
+            </button>
+            <button class="icon-button">
+              <span class="material-symbols-outlined"> settings </span>
+            </button>
+            <div class="user-card">
+              <div class="user-avatar">JY</div>
+              <div>
+                <p class="user-name">Jony Inc</p>
+                <span class="user-role">Creator</span>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <section class="grid">
+          <article class="card card--main">
+            <div class="card__header">
+              <div>
+                <p class="muted">Total Reach</p>
+                <h1>350,809</h1>
+              </div>
+              <div class="trend trend--positive">
+                <span class="material-symbols-outlined"> arrow_upward </span>
+                <span>8.7%</span>
+              </div>
+            </div>
+            <div class="highlights">
+              <div>
+                <p class="muted">Likes</p>
+                <h3>186,072</h3>
+              </div>
+              <div>
+                <p class="muted">Comments</p>
+                <h3>12,043</h3>
+              </div>
+              <div>
+                <p class="muted">Shares</p>
+                <h3>48,072</h3>
+              </div>
+            </div>
+            <div class="conversion">
+              <p>Conversion Rate</p>
+              <div class="progress">
+                <div class="progress__value" style="width: 68%"></div>
+              </div>
+              <span class="progress__label">68% goal completion</span>
+            </div>
+            <div class="sentiment">
+              <div class="sentiment__item">
+                <span class="dot dot--green"></span>
+                <div>
+                  <p class="muted">Positive</p>
+                  <strong>72%</strong>
+                </div>
+              </div>
+              <div class="sentiment__item">
+                <span class="dot dot--yellow"></span>
+                <div>
+                  <p class="muted">Neutral</p>
+                  <strong>18%</strong>
+                </div>
+              </div>
+              <div class="sentiment__item">
+                <span class="dot dot--red"></span>
+                <div>
+                  <p class="muted">Negative</p>
+                  <strong>10%</strong>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="card card--compact">
+            <div class="card__header">
+              <div>
+                <p class="muted">Campaign Reach</p>
+                <h2>180,807,893</h2>
+              </div>
+            </div>
+            <ul class="campaign-details">
+              <li>
+                <span>12 countries</span>
+                <span>reach</span>
+              </li>
+              <li>
+                <span>90 creators</span>
+                <span>active</span>
+              </li>
+              <li>
+                <span>3 months</span>
+                <span>duration</span>
+              </li>
+            </ul>
+            <div class="mini-chart">
+              <div class="bar" style="height: 36%"></div>
+              <div class="bar" style="height: 62%"></div>
+              <div class="bar" style="height: 80%"></div>
+              <div class="bar" style="height: 52%"></div>
+              <div class="bar" style="height: 68%"></div>
+              <div class="bar" style="height: 92%"></div>
+            </div>
+          </article>
+
+          <article class="card card--map">
+            <div class="card__header">
+              <div>
+                <p class="muted">Top Performing Regions</p>
+                <h2>Global Coverage</h2>
+              </div>
+              <button class="icon-button">
+                <span class="material-symbols-outlined"> more_horiz </span>
+              </button>
+            </div>
+            <div class="map">
+              <div class="map__bubble" style="top: 35%; left: 24%">
+                <span>Chicago</span>
+                <strong>54k</strong>
+              </div>
+              <div class="map__bubble" style="top: 28%; left: 60%">
+                <span>Berlin</span>
+                <strong>38k</strong>
+              </div>
+              <div class="map__bubble" style="top: 68%; left: 76%">
+                <span>Singapore</span>
+                <strong>32k</strong>
+              </div>
+            </div>
+          </article>
+
+          <article class="card card--table">
+            <div class="card__header">
+              <div>
+                <p class="muted">Top Influencers</p>
+                <h2>Influencer Roster</h2>
+              </div>
+              <button class="icon-button">
+                <span class="material-symbols-outlined"> upload_file </span>
+              </button>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Influencer</th>
+                  <th>Posts</th>
+                  <th>Followers</th>
+                  <th>Engagement</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <span class="avatar avatar--pink">MW</span>
+                    Malik Winocott
+                  </td>
+                  <td>24</td>
+                  <td>1.2M</td>
+                  <td>
+                    <span class="trend trend--positive">
+                      <span class="material-symbols-outlined"> arrow_upward </span>
+                      12%
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <span class="avatar avatar--purple">DA</span>
+                    Daphne Alden
+                  </td>
+                  <td>19</td>
+                  <td>864K</td>
+                  <td>
+                    <span class="trend trend--neutral">
+                      <span class="material-symbols-outlined"> horizontal_rule </span>
+                      0.2%
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <span class="avatar avatar--cyan">LS</span>
+                    Lysa Sanchez
+                  </td>
+                  <td>16</td>
+                  <td>640K</td>
+                  <td>
+                    <span class="trend trend--negative">
+                      <span class="material-symbols-outlined"> arrow_downward </span>
+                      -3%
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <span class="avatar avatar--orange">TN</span>
+                    Theo Nanda
+                  </td>
+                  <td>21</td>
+                  <td>712K</td>
+                  <td>
+                    <span class="trend trend--positive">
+                      <span class="material-symbols-outlined"> arrow_upward </span>
+                      6%
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </article>
+
+          <article class="card card--audience">
+            <div class="card__header">
+              <div>
+                <p class="muted">Audience Age Gender</p>
+                <h2>Distribution</h2>
+              </div>
+            </div>
+            <div class="bars">
+              <div class="bar-row">
+                <span>18-24</span>
+                <div class="bar-track">
+                  <div class="bar-track__segment female" style="width: 62%"></div>
+                  <div class="bar-track__segment male" style="width: 38%"></div>
+                </div>
+                <span>62%</span>
+              </div>
+              <div class="bar-row">
+                <span>25-34</span>
+                <div class="bar-track">
+                  <div class="bar-track__segment female" style="width: 48%"></div>
+                  <div class="bar-track__segment male" style="width: 52%"></div>
+                </div>
+                <span>48%</span>
+              </div>
+              <div class="bar-row">
+                <span>35-44</span>
+                <div class="bar-track">
+                  <div class="bar-track__segment female" style="width: 36%"></div>
+                  <div class="bar-track__segment male" style="width: 64%"></div>
+                </div>
+                <span>36%</span>
+              </div>
+              <div class="bar-row">
+                <span>45-54</span>
+                <div class="bar-track">
+                  <div class="bar-track__segment female" style="width: 22%"></div>
+                  <div class="bar-track__segment male" style="width: 78%"></div>
+                </div>
+                <span>22%</span>
+              </div>
+            </div>
+            <div class="legend">
+              <div><span class="dot dot--blue"></span>Male</div>
+              <div><span class="dot dot--pink"></span>Female</div>
+            </div>
+          </article>
+
+          <article class="card card--radar">
+            <div class="card__header">
+              <div>
+                <p class="muted">Follower Interests</p>
+                <h2>Affinity Radar</h2>
+              </div>
+            </div>
+            <div class="radar">
+              <svg viewBox="0 0 200 200" role="img" aria-label="Radar chart">
+                <polygon class="radar-grid" points="100,10 190,100 100,190 10,100" />
+                <polygon class="radar-grid" points="100,40 160,100 100,160 40,100" />
+                <polygon class="radar-grid" points="100,70 130,100 100,130 70,100" />
+                <polygon
+                  class="radar-shape"
+                  points="100,35 155,105 105,150 45,90"
+                />
+              </svg>
+              <ul>
+                <li><span class="dot dot--orange"></span>Fashion</li>
+                <li><span class="dot dot--cyan"></span>Beauty</li>
+                <li><span class="dot dot--purple"></span>Tech</li>
+                <li><span class="dot dot--green"></span>Gaming</li>
+              </ul>
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
