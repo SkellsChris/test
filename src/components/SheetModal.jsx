@@ -96,8 +96,11 @@ const normaliseKeyword = (value) => {
   if (value === undefined || value === null) {
     return '';
   }
-  return value.toString().trim().replace(/\s+/g, ' ').toLowerCase();
+  return value.toString().trim().replace(/\s+/g, ' ');
 };
+
+const buildKeywordKey = (primary, secondary) =>
+  `${normaliseKeyword(primary).toLowerCase()}::${normaliseKeyword(secondary).toLowerCase()}`;
 
 const normaliseEnum = (value, options, fallback) => {
   if (!value) {
@@ -273,7 +276,20 @@ const toCsv = (rows) => {
   return [header.join(','), ...rowsData].join('\n');
 };
 
-const buildKeywordKey = (primary, secondary) => `${primary}::${secondary || ''}`;
+const isLikelyNumeric = (value) => {
+  if (value === undefined || value === null) {
+    return false;
+  }
+  if (typeof value === 'number') {
+    return Number.isFinite(value);
+  }
+  const trimmed = value.toString().trim();
+  if (!trimmed) {
+    return false;
+  }
+  const normalised = trimmed.replace(/\s+/g, '').replace(',', '.');
+  return normalised !== '' && Number.isFinite(Number(normalised));
+};
 
 const formatCellValue = (column, row) => {
   const value = row[column.key];
@@ -772,28 +788,53 @@ const SheetModal = ({ open, onClose, rows }) => {
     const { dedupe, autoEnrich } = options;
     const prepared = records
       .map((record) => {
-        const [primary = '', secondary = '', volume, difficulty, cpc, intent, funnelStage, fw, ws, win, page] = record;
+        if (!record || record.length === 0) {
+          return null;
+        }
+
+        const cells = record.map((cell) => (cell === undefined || cell === null ? '' : cell.toString().trim()));
+        const [primary = '', second = '', third, fourth, fifth, sixth, seventh, eighth, ninth, tenth, eleventh] = cells;
+
+        const treatSecondAsMetric = isLikelyNumeric(second);
+
+        if (treatSecondAsMetric) {
+          return {
+            primaryKeyword: primary,
+            secondaryKeyword: '',
+            volume: second,
+            difficulty: third,
+            cpc: fourth,
+            intent: fifth,
+            funnelStage: sixth,
+            fw: seventh,
+            ws: eighth,
+            win: ninth,
+            page: tenth,
+            autoEnrich,
+          };
+        }
+
         return {
           primaryKeyword: primary,
-          secondaryKeyword: secondary,
-          volume,
-          difficulty,
-          cpc,
-          intent,
-          funnelStage,
-          fw,
-          ws,
-          win,
-          page,
+          secondaryKeyword: second,
+          volume: third,
+          difficulty: fourth,
+          cpc: fifth,
+          intent: sixth,
+          funnelStage: seventh,
+          fw: eighth,
+          ws: ninth,
+          win: tenth,
+          page: eleventh,
           autoEnrich,
         };
       })
-      .filter((row) => normaliseKeyword(row.primaryKeyword));
+      .filter((row) => row && normaliseKeyword(row.primaryKeyword));
 
     const deduped = [];
     const seen = new Set();
     prepared.forEach((row) => {
-      const key = buildKeywordKey(normaliseKeyword(row.primaryKeyword), normaliseKeyword(row.secondaryKeyword));
+      const key = buildKeywordKey(row.primaryKeyword, row.secondaryKeyword);
       if (dedupe && seen.has(key)) {
         return;
       }
