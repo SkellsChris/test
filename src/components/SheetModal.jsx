@@ -1346,13 +1346,13 @@ const SheetModal = ({ open, onClose, rows }) => {
             </div>
             <div className="sheet-side-panel__body">
               <label className="sheet-side-panel__label" htmlFor="sheet-paste-textarea">
-                Paste one keyword per line, or two columns separated by comma/tab: primary<TAB>secondary.
+                Paste one keyword per line, or two columns separated by comma/tab: primary&lt;TAB&gt;secondary.
               </label>
               <textarea
                 id="sheet-paste-textarea"
                 value={pasteText}
                 onChange={(event) => setPasteText(event.target.value)}
-                placeholder="Paste one keyword per line, or two columns separated by comma/tab: primary<TAB>secondary."
+                placeholder="Paste one keyword per line, or two columns separated by comma/tab: primary&lt;TAB&gt;secondary."
               />
 
               <div className="sheet-side-panel__options">
