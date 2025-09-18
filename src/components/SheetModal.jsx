@@ -1077,19 +1077,18 @@ const SheetModal = ({ open, onClose, rows }) => {
 
   return (
     <div className="sheet-modal" role="dialog" aria-modal="true" aria-labelledby="sheet-modal-title">
-      <button type="button" className="sheet-modal__overlay" onClick={onClose} aria-label="Close keyword sheet overlay" />
-      <div className="sheet-modal__dialog" role="document">
-        <header className="sheet-modal__header">
-          <div>
-            <p className="sheet-modal__eyebrow">Keyword performance</p>
-            <h2 id="sheet-modal-title">Campaign sheet</h2>
+      <button type="button" className="sheet-modal__backdrop" onClick={onClose} aria-label="Close keyword sheet overlay" />
+      <div className="sheet-modal__container" role="document">
+        <header className="sheet-modal__topbar">
+          <div className="sheet-modal__headline">
+            <div className="sheet-modal__title-block">
+              <p className="sheet-modal__eyebrow">Keyword performance</p>
+              <h2 id="sheet-modal-title">Campaign sheet</h2>
+            </div>
+            <button type="button" className="sheet-modal__close" onClick={onClose} aria-label="Close keyword sheet">
+              <span aria-hidden="true">&times;</span>
+            </button>
           </div>
-          <button type="button" className="sheet-modal__close" onClick={onClose} aria-label="Close keyword sheet">
-            <span aria-hidden="true">&times;</span>
-          </button>
-        </header>
-
-        <div className="sheet-modal__body">
           <div className="sheet-toolbar" role="region" aria-label="Keyword filters and actions">
             <div className="sheet-toolbar__group">
               <div className="sheet-field">
@@ -1159,6 +1158,10 @@ const SheetModal = ({ open, onClose, rows }) => {
               </button>
             </div>
           </div>
+
+        </header>
+
+        <div className="sheet-modal__main">
 
           <div className="sheet-table-wrapper">
             <div className="sheet-table-scroll" ref={tableScrollRef}>

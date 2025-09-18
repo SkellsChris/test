@@ -287,57 +287,77 @@ body {
 .sheet-modal {
   position: fixed;
   inset: 0;
-  z-index: 20;
+  z-index: 30;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2.5rem;
+  align-items: stretch;
+  justify-content: stretch;
 }
 
-.sheet-modal__overlay {
+.sheet-modal__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(15, 23, 42, 0.35);
-  backdrop-filter: blur(8px);
+  background: rgba(15, 23, 42, 0.25);
+  backdrop-filter: blur(16px);
   border: none;
   padding: 0;
   cursor: pointer;
+  animation: sheetModalBackdrop 280ms ease forwards;
 }
 
-.sheet-modal__overlay:focus-visible {
+.sheet-modal__backdrop:focus-visible {
   outline: none;
 }
 
-.sheet-modal__dialog {
+.sheet-modal__container {
   position: relative;
   z-index: 1;
-  width: min(1440px, 96vw);
-  height: 90vh;
-  max-height: 90vh;
-  background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.92), rgba(230, 238, 255, 0.9));
-  border-radius: 32px;
-  box-shadow: 0 45px 120px rgba(44, 57, 118, 0.22);
-  padding: 2rem 2.4rem;
+  width: 100%;
+  height: 100%;
+  padding: 2.5rem 3rem;
   display: flex;
   flex-direction: column;
+  gap: 1.75rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(230, 238, 255, 0.82));
+  backdrop-filter: blur(24px);
+  border-radius: 32px;
+  box-shadow: 0 45px 120px rgba(44, 57, 118, 0.22);
   overflow: hidden;
   border: 1px solid rgba(148, 163, 184, 0.25);
+  transform-origin: top center;
+  animation: sheetModalEnter 320ms ease forwards;
 }
 
-.sheet-modal__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 1.5rem;
-  gap: 1.5rem;
-  color: var(--text-strong);
-}
-
-.sheet-modal__body {
-  flex: 1 1 auto;
+.sheet-modal__topbar {
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 1.4rem;
+  color: var(--text-strong);
+}
+
+.sheet-modal__headline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.sheet-modal__headline button {
+  flex-shrink: 0;
+}
+
+.sheet-modal__title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.sheet-modal__main {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
   min-height: 0;
 }
 
@@ -350,7 +370,7 @@ body {
   font-weight: 600;
 }
 
-.sheet-modal__header h2 {
+.sheet-modal__title-block h2 {
   margin: 0;
   font-size: 1.8rem;
 }
@@ -689,8 +709,8 @@ body {
 
 .sheet-toast {
   position: absolute;
-  bottom: 1.5rem;
-  right: 2.5rem;
+  bottom: 3rem;
+  right: 3rem;
   background: rgba(15, 23, 42, 0.8);
   color: white;
   padding: 0.65rem 1.2rem;
@@ -870,8 +890,8 @@ body {
 
 .sheet-inline-error {
   position: absolute;
-  left: 2.4rem;
-  bottom: 1.2rem;
+  left: 3rem;
+  bottom: 2.5rem;
   color: var(--danger);
   font-weight: 600;
 }
@@ -881,6 +901,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 1.5rem;
   padding: 1rem 1.5rem;
   border-radius: 20px;
@@ -928,19 +949,53 @@ body {
   color: var(--text-strong);
 }
 
+.sheet-modal__footer-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+@keyframes sheetModalEnter {
+  from {
+    opacity: 0;
+    transform: translateY(32px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes sheetModalBackdrop {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet-modal__backdrop,
+  .sheet-modal__container {
+    animation: none !important;
+  }
+}
+
 @media (max-width: 960px) {
-  .sheet-modal {
+  .sheet-modal__container {
     padding: 1.5rem;
-  }
-
-  .sheet-modal__dialog {
-    width: 100%;
-    height: 92vh;
     border-radius: 24px;
-    padding: 1.6rem;
   }
 
-  .sheet-modal__header h2 {
+  .sheet-modal__headline {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .sheet-modal__title-block h2 {
     font-size: 1.5rem;
   }
 
