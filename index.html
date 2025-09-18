@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Marketing Intelligence Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="color-haze color-haze--one"></div>
+    <div class="color-haze color-haze--two"></div>
+
+    <div class="layout">
+      <aside class="sidebar" aria-label="Primary">
+        <div class="sidebar__brand">
+          <span class="sidebar__logo">◐</span>
+          <div>
+            <p class="sidebar__title">Lumina</p>
+            <p class="sidebar__subtitle">Marketing Suite</p>
+          </div>
+        </div>
+
+        <nav class="sidebar__nav" aria-label="Main navigation">
+          <a href="#" class="sidebar__link sidebar__link--active">
+            <span class="sidebar__icon">🏠</span>
+            Overview
+          </a>
+          <a href="#" class="sidebar__link">
+            <span class="sidebar__icon">📈</span>
+            Campaigns
+          </a>
+          <a href="#" class="sidebar__link">
+            <span class="sidebar__icon">👥</span>
+            Audience
+          </a>
+          <a href="#" class="sidebar__link">
+            <span class="sidebar__icon">🧭</span>
+            Journeys
+          </a>
+          <a href="#" class="sidebar__link">
+            <span class="sidebar__icon">⚙️</span>
+            Settings
+          </a>
+        </nav>
+
+        <div class="sidebar__footer">
+          <p class="sidebar__footer-title">Team activity</p>
+          <ul class="sidebar__activity">
+            <li>
+              <span class="activity__dot"></span>
+              New campaign brief uploaded
+            </li>
+            <li>
+              <span class="activity__dot"></span>
+              Feedback session today 3:00pm
+            </li>
+            <li>
+              <span class="activity__dot"></span>
+              Billing synced with finance
+            </li>
+          </ul>
+        </div>
+      </aside>
+
+      <div class="main">
+        <header class="topbar">
+          <div class="topbar__title">
+            <h1>Performance dashboard</h1>
+            <p>Track marketing reach, engagement, and revenue insights</p>
+          </div>
+
+          <div class="topbar__actions">
+            <label class="search">
+              <span class="search__icon" aria-hidden="true">🔍</span>
+              <input type="search" placeholder="Search reports" aria-label="Search reports" />
+            </label>
+            <button class="chip">Last 30 days</button>
+            <button class="primary-btn">Export</button>
+            <button class="avatar" aria-label="Open profile">
+              <span>MS</span>
+            </button>
+          </div>
+        </header>
+
+        <main class="content" aria-label="Dashboard">
+          <section class="summary" aria-labelledby="summary-heading">
+            <header class="section-heading">
+              <h2 id="summary-heading">Key metrics</h2>
+              <div class="section-heading__actions">
+                <button class="filter-btn filter-btn--active">Overview</button>
+                <button class="filter-btn">Paid</button>
+                <button class="filter-btn">Organic</button>
+              </div>
+            </header>
+
+            <div class="summary__grid">
+              <article class="card metric" aria-label="Monthly revenue">
+                <div class="metric__header">
+                  <p class="metric__label">Monthly revenue</p>
+                  <span class="metric__trend metric__trend--up">+12.6%</span>
+                </div>
+                <p class="metric__value">$248,400</p>
+                <p class="metric__context">$27K above target</p>
+                <div class="spark spark--purple" aria-hidden="true">
+                  <svg viewBox="0 0 160 54"><path d="M2 38 L32 18 L58 34 L84 12 L118 28 L158 10" /></svg>
+                </div>
+              </article>
+
+              <article class="card metric" aria-label="Active subscribers">
+                <div class="metric__header">
+                  <p class="metric__label">Active subscribers</p>
+                  <span class="metric__trend metric__trend--up">+3.4%</span>
+                </div>
+                <p class="metric__value">68,320</p>
+                <p class="metric__context">3,512 new this week</p>
+                <div class="spark spark--blue" aria-hidden="true">
+                  <svg viewBox="0 0 160 54"><path d="M0 28 L20 26 L42 18 L70 32 L94 22 L120 36 L158 30" /></svg>
+                </div>
+              </article>
+
+              <article class="card metric" aria-label="Engagement rate">
+                <div class="metric__header">
+                  <p class="metric__label">Engagement rate</p>
+                  <span class="metric__trend metric__trend--stable">+0.8%</span>
+                </div>
+                <p class="metric__value">42.5%</p>
+                <p class="metric__context">Highest on webinars</p>
+                <div class="spark spark--orange" aria-hidden="true">
+                  <svg viewBox="0 0 160 54"><path d="M0 40 L26 30 L46 34 L74 18 L100 22 L124 14 L160 26" /></svg>
+                </div>
+              </article>
+
+              <article class="card metric" aria-label="Support tickets">
+                <div class="metric__header">
+                  <p class="metric__label">Support tickets</p>
+                  <span class="metric__trend metric__trend--down">-18.2%</span>
+                </div>
+                <p class="metric__value">164</p>
+                <p class="metric__context">Avg response 1h 14m</p>
+                <div class="spark spark--teal" aria-hidden="true">
+                  <svg viewBox="0 0 160 54"><path d="M0 22 L30 18 L48 28 L70 20 L100 30 L132 24 L158 34" /></svg>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="analytics" aria-labelledby="analytics-heading">
+            <header class="section-heading">
+              <h2 id="analytics-heading">Analytics breakdown</h2>
+              <button class="secondary-btn">View full report</button>
+            </header>
+
+            <div class="analytics__grid">
+              <article class="card chart-card" aria-label="Traffic overview">
+                <header class="chart-card__header">
+                  <div>
+                    <p class="chart-card__label">Traffic</p>
+                    <h3>Channel performance</h3>
+                  </div>
+                  <button class="chip">Q1 2024</button>
+                </header>
+
+                <div class="chart-card__body">
+                  <div class="chart-card__legend">
+                    <span class="legend-dot legend-dot--primary"></span> Paid media
+                    <span class="legend-dot legend-dot--secondary"></span> Organic reach
+                  </div>
+                  <div class="line-chart" role="img" aria-label="Line chart showing growth of paid media and organic reach">
+                    <svg viewBox="0 0 460 210">
+                      <defs>
+                        <linearGradient id="lineGradient" x1="0" x2="0" y1="0" y2="1">
+                          <stop offset="0%" stop-color="rgba(107, 91, 255, 0.4)" />
+                          <stop offset="100%" stop-color="rgba(107, 91, 255, 0)" />
+                        </linearGradient>
+                        <linearGradient id="lineGradientSecondary" x1="0" x2="0" y1="0" y2="1">
+                          <stop offset="0%" stop-color="rgba(255, 124, 150, 0.4)" />
+                          <stop offset="100%" stop-color="rgba(255, 124, 150, 0)" />
+                        </linearGradient>
+                      </defs>
+                      <polygon class="line-chart__fill line-chart__fill--primary" points="0,160 0,130 60,110 120,90 180,120 240,70 300,82 360,62 420,96 420,160" />
+                      <polyline class="line-chart__line line-chart__line--primary" points="0,130 60,110 120,90 180,120 240,70 300,82 360,62 420,96" />
+                      <polygon class="line-chart__fill line-chart__fill--secondary" points="0,160 0,150 60,142 120,126 180,118 240,140 300,132 360,136 420,122 420,160" />
+                      <polyline class="line-chart__line line-chart__line--secondary" points="0,150 60,142 120,126 180,118 240,140 300,132 360,136 420,122" />
+                    </svg>
+                  </div>
+                  <ul class="chart-stats">
+                    <li>
+                      <span>Avg reach</span>
+                      <strong>482K</strong>
+                    </li>
+                    <li>
+                      <span>CTR</span>
+                      <strong>5.4%</strong>
+                    </li>
+                    <li>
+                      <span>Spend</span>
+                      <strong>$92K</strong>
+                    </li>
+                    <li>
+                      <span>ROI</span>
+                      <strong>162%</strong>
+                    </li>
+                  </ul>
+                </div>
+              </article>
+
+              <article class="card chart-card chart-card--compact" aria-label="Acquisition sources">
+                <header class="chart-card__header">
+                  <div>
+                    <p class="chart-card__label">Acquisition</p>
+                    <h3>Top sources</h3>
+                  </div>
+                  <button class="icon-btn" aria-label="More options">⋮</button>
+                </header>
+                <ul class="source-list">
+                  <li>
+                    <div>
+                      <p class="source-list__name">Paid social</p>
+                      <p class="source-list__meta">36,204 sessions · +18%</p>
+                    </div>
+                    <div class="progress">
+                      <span style="width: 78%"></span>
+                    </div>
+                  </li>
+                  <li>
+                    <div>
+                      <p class="source-list__name">Email nurture</p>
+                      <p class="source-list__meta">21,880 sessions · +6%</p>
+                    </div>
+                    <div class="progress">
+                      <span style="width: 56%"></span>
+                    </div>
+                  </li>
+                  <li>
+                    <div>
+                      <p class="source-list__name">Search</p>
+                      <p class="source-list__meta">18,406 sessions · +12%</p>
+                    </div>
+                    <div class="progress">
+                      <span style="width: 48%"></span>
+                    </div>
+                  </li>
+                  <li>
+                    <div>
+                      <p class="source-list__name">Partnerships</p>
+                      <p class="source-list__meta">13,220 sessions · +4%</p>
+                    </div>
+                    <div class="progress">
+                      <span style="width: 34%"></span>
+                    </div>
+                  </li>
+                </ul>
+              </article>
+
+              <article class="card doughnut" aria-label="Revenue split by segment">
+                <header class="chart-card__header">
+                  <div>
+                    <p class="chart-card__label">Revenue</p>
+                    <h3>Segment share</h3>
+                  </div>
+                  <div class="chart-card__legend">
+                    <span class="legend-dot legend-dot--primary"></span> Enterprise
+                    <span class="legend-dot legend-dot--secondary"></span> Growth
+                  </div>
+                </header>
+                <div class="doughnut__chart" role="img" aria-label="Enterprise segment at 64 percent, Growth at 26 percent, SMB at 10 percent">
+                  <svg viewBox="0 0 220 220">
+                    <circle class="doughnut__track" cx="110" cy="110" r="80"></circle>
+                    <circle class="doughnut__segment doughnut__segment--primary" cx="110" cy="110" r="80"></circle>
+                    <circle class="doughnut__segment doughnut__segment--secondary" cx="110" cy="110" r="80"></circle>
+                    <circle class="doughnut__segment doughnut__segment--tertiary" cx="110" cy="110" r="80"></circle>
+                  </svg>
+                  <div class="doughnut__center">
+                    <p>Total</p>
+                    <strong>$428K</strong>
+                  </div>
+                </div>
+                <ul class="doughnut__breakdown">
+                  <li>
+                    <span class="legend-dot legend-dot--primary"></span>
+                    Enterprise
+                    <strong>64%</strong>
+                  </li>
+                  <li>
+                    <span class="legend-dot legend-dot--secondary"></span>
+                    Growth
+                    <strong>26%</strong>
+                  </li>
+                  <li>
+                    <span class="legend-dot legend-dot--tertiary"></span>
+                    SMB
+                    <strong>10%</strong>
+                  </li>
+                </ul>
+              </article>
+
+              <article class="card roadmap" aria-label="Upcoming initiatives">
+                <header class="chart-card__header">
+                  <div>
+                    <p class="chart-card__label">Pipeline</p>
+                    <h3>Upcoming launches</h3>
+                  </div>
+                  <button class="secondary-btn">Add item</button>
+                </header>
+                <ul class="roadmap__list">
+                  <li>
+                    <span class="roadmap__tag">Campaign</span>
+                    <div>
+                      <p>Product story video series</p>
+                      <p class="roadmap__meta">Production sprint • Apr 4 – Apr 18</p>
+                    </div>
+                    <span class="status status--active">In progress</span>
+                  </li>
+                  <li>
+                    <span class="roadmap__tag">Automation</span>
+                    <div>
+                      <p>Lifecycle email refresh</p>
+                      <p class="roadmap__meta">Design review • Apr 11</p>
+                    </div>
+                    <span class="status status--blocked">Blocked</span>
+                  </li>
+                  <li>
+                    <span class="roadmap__tag">Event</span>
+                    <div>
+                      <p>Customer summit pre-launch</p>
+                      <p class="roadmap__meta">Asset kickoff • Apr 24</p>
+                    </div>
+                    <span class="status status--upcoming">Upcoming</span>
+                  </li>
+                </ul>
+              </article>
+            </div>
+          </section>
+
+          <section class="table" aria-labelledby="table-heading">
+            <header class="section-heading">
+              <h2 id="table-heading">Top converting experiments</h2>
+              <div class="section-heading__actions">
+                <button class="chip chip--ghost">All teams</button>
+                <button class="chip chip--ghost">Share</button>
+              </div>
+            </header>
+
+            <div class="table__wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Experiment</th>
+                    <th scope="col">Owner</th>
+                    <th scope="col">Segment</th>
+                    <th scope="col">Lift</th>
+                    <th scope="col">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <p class="table__title">Homepage hero personalization</p>
+                      <p class="table__subtitle">A/B test • 38k visitors</p>
+                    </td>
+                    <td>Nova Patel</td>
+                    <td>Enterprise</td>
+                    <td class="table__lift table__lift--up">+22.4%</td>
+                    <td><span class="pill pill--success">Live</span></td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <p class="table__title">Pricing comparison cards</p>
+                      <p class="table__subtitle">Multivariate • 18k visitors</p>
+                    </td>
+                    <td>Andrew Kim</td>
+                    <td>Growth</td>
+                    <td class="table__lift table__lift--up">+14.1%</td>
+                    <td><span class="pill pill--success">Live</span></td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <p class="table__title">Onboarding drip refresh</p>
+                      <p class="table__subtitle">Holdout • 22k visitors</p>
+                    </td>
+                    <td>Maya Lopez</td>
+                    <td>SMB</td>
+                    <td class="table__lift table__lift--neutral">+6.3%</td>
+                    <td><span class="pill pill--planned">Scheduled</span></td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <p class="table__title">Upsell modal targeting</p>
+                      <p class="table__subtitle">A/B test • 12k visitors</p>
+                    </td>
+                    <td>Liam Chen</td>
+                    <td>Enterprise</td>
+                    <td class="table__lift table__lift--down">-2.4%</td>
+                    <td><span class="pill pill--review">Review</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>
