@@ -14,12 +14,7 @@ const BASE_TOTALS = {
   title: 'Total earning',
 };
 
-export const TIMEFRAME_OPTIONS = [
-  { id: 'TM', label: 'TM', name: 'This Month' },
-  { id: 'TR', label: 'TR', name: 'This Quarter' },
-  { id: 'TY', label: 'TY', name: 'This Year' },
-  { id: 'ALL', label: 'ALL', name: 'Lifetime' },
-];
+export const TIMEFRAME_OPTIONS = [{ id: 'TY', label: 'Sheet', name: 'Sheet' }];
 
 export const DASHBOARD_DATA = {
   TM: {
