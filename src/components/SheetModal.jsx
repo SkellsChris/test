@@ -804,12 +804,36 @@ const SheetModal = ({ open, onClose, rows }) => {
     return deduped;
   };
 
-  const handlePastePreview = () => {
+  const parsePastedRecords = useCallback(() => {
+    if (!pasteText.trim()) {
+      return [];
+    }
+
     const { rows: records } = parseDelimitedText(pasteText, {
       autoDetect: pasteOptions.detectSeparator,
       skipHeader: pasteOptions.skipHeader,
     });
-    const prepared = prepareRecordsForIngestion(records, pasteOptions);
+
+    return prepareRecordsForIngestion(records, pasteOptions);
+  }, [
+    pasteText,
+    pasteOptions.detectSeparator,
+    pasteOptions.skipHeader,
+    pasteOptions.dedupe,
+    pasteOptions.autoEnrich,
+  ]);
+
+  useEffect(() => {
+    if (!isPastePanelOpen) {
+      return;
+    }
+
+    const prepared = parsePastedRecords();
+    setPastePreview(prepared.slice(0, 20));
+  }, [isPastePanelOpen, parsePastedRecords]);
+
+  const handlePastePreview = () => {
+    const prepared = parsePastedRecords();
     setPastePreview(prepared.slice(0, 20));
     if (!prepared.length) {
       setToast('Nothing to preview');
@@ -817,11 +841,7 @@ const SheetModal = ({ open, onClose, rows }) => {
   };
 
   const handlePasteAdd = () => {
-    const { rows: records } = parseDelimitedText(pasteText, {
-      autoDetect: pasteOptions.detectSeparator,
-      skipHeader: pasteOptions.skipHeader,
-    });
-    const prepared = prepareRecordsForIngestion(records, pasteOptions);
+    const prepared = parsePastedRecords();
     commitRows(prepared, { dedupe: pasteOptions.dedupe });
     setPastePanelOpen(false);
     setPastePreview([]);
