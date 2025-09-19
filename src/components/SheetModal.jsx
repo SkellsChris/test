@@ -270,93 +270,36 @@ const getFwDisplayValue = (row) => {
   return numeric !== null ? numeric.toFixed(1) : '';
 };
 
-const createRange = () => ({ min: Infinity, max: -Infinity });
-
-const updateRange = (range, value) => {
-  if (!Number.isFinite(value)) {
-    return;
-  }
-  range.min = Math.min(range.min, value);
-  range.max = Math.max(range.max, value);
-};
-
-const finalizeRange = (range) => {
-  if (!Number.isFinite(range.min) || !Number.isFinite(range.max) || range.min === Infinity) {
-    return { min: 0, max: 0 };
-  }
-  return range;
-};
-
-const computeNormalizationRanges = (rows) => {
-  const ranges = {
-    volume: createRange(),
-    cpc: createRange(),
-    difficulty: createRange(),
-    fw: createRange(),
-  };
-
-  rows.forEach((row) => {
-    updateRange(ranges.volume, row.volume);
-    updateRange(ranges.cpc, row.cpc);
-    updateRange(ranges.difficulty, row.difficulty);
-    updateRange(ranges.fw, getFwNumericValue(row));
-  });
-
-  return {
-    volume: finalizeRange(ranges.volume),
-    cpc: finalizeRange(ranges.cpc),
-    difficulty: finalizeRange(ranges.difficulty),
-    fw: finalizeRange(ranges.fw),
-  };
-};
-
-const normaliseMetricValue = (value, range) => {
-  if (!Number.isFinite(value)) {
-    return 0;
-  }
-  if (!range) {
-    return 0;
-  }
-  const { min, max } = range;
-  if (!Number.isFinite(min) || !Number.isFinite(max)) {
-    return 0;
-  }
-  if (max > min) {
-    const scaled = ((value - min) / (max - min)) * 100;
-    if (!Number.isFinite(scaled)) {
-      return 0;
-    }
-    return Math.min(Math.max(scaled, 0), 100);
-  }
-  if (value > 0) {
-    return 100;
-  }
-  return 0;
-};
-
-const computeWsScore = (row, ranges) => {
+const computeWsScore = (row) => {
   if (!row) {
     return 0;
   }
-  const nVolume = normaliseMetricValue(row.volume ?? 0, ranges.volume);
-  const nCpc = normaliseMetricValue(row.cpc ?? 0, ranges.cpc);
-  const nDifficulty = normaliseMetricValue(row.difficulty ?? 0, ranges.difficulty);
+
+  const volume = Number.isFinite(row.volume) ? row.volume : 0;
+  const cpc = Number.isFinite(row.cpc) ? row.cpc : 0;
+  const difficulty = Number.isFinite(row.difficulty) ? row.difficulty : 0;
   const fwNumeric = getFwNumericValue(row);
-  const nFw = normaliseMetricValue(fwNumeric ?? 0, ranges.fw);
-  const denominator = Math.max(nDifficulty, 1);
-  const rawScore = denominator > 0 ? ((nVolume * nCpc) / denominator) * nFw : 0;
+  const effectiveFw = Number.isFinite(fwNumeric) && fwNumeric > 0 ? fwNumeric : 1;
+
+  if (volume <= 0 || cpc <= 0) {
+    return 0;
+  }
+
+  const denominator = Math.max(difficulty, 1);
+  const rawScore = (volume * cpc * effectiveFw) / denominator;
+
   if (!Number.isFinite(rawScore)) {
     return 0;
   }
-  return Number.parseFloat(rawScore.toFixed(4));
+
+  return Number.parseFloat(rawScore.toFixed(2));
 };
 
 const applyWsScoreToRows = (rows) => {
   if (!Array.isArray(rows) || rows.length === 0) {
     return Array.isArray(rows) ? rows.map((row) => ({ ...row, ws: 0 })) : [];
   }
-  const ranges = computeNormalizationRanges(rows);
-  return rows.map((row) => ({ ...row, ws: computeWsScore(row, ranges) }));
+  return rows.map((row) => ({ ...row, ws: computeWsScore(row) }));
 };
 
 const parseWin = (value) => {
