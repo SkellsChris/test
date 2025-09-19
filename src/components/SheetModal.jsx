@@ -150,6 +150,74 @@ const parseFwNumeric = (value) => {
   return Number.isNaN(numeric) ? null : numeric;
 };
 
+const sanitiseNumericInput = (value) => {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  const trimmed = value.toString().trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const cleaned = trimmed.replace(/[^0-9,.-]/g, '');
+  if (!cleaned) {
+    return null;
+  }
+
+  const hasComma = cleaned.includes(',');
+  const hasDot = cleaned.includes('.');
+
+  if (hasComma && hasDot) {
+    const lastComma = cleaned.lastIndexOf(',');
+    const lastDot = cleaned.lastIndexOf('.');
+    if (lastComma > lastDot) {
+      const normalised = cleaned.replace(/\./g, '').replace(',', '.');
+      const numeric = Number.parseFloat(normalised);
+      return Number.isNaN(numeric) ? null : numeric;
+    }
+    const normalised = cleaned.replace(/,/g, '');
+    const numeric = Number.parseFloat(normalised);
+    return Number.isNaN(numeric) ? null : numeric;
+  }
+
+  if (hasComma) {
+    const lastComma = cleaned.lastIndexOf(',');
+    const digitsAfter = cleaned.length - lastComma - 1;
+    const normalised =
+      digitsAfter === 3 && cleaned.length > 4
+        ? cleaned.replace(/,/g, '')
+        : cleaned.replace(',', '.');
+    const numeric = Number.parseFloat(normalised);
+    return Number.isNaN(numeric) ? null : numeric;
+  }
+
+  if (hasDot) {
+    const lastDot = cleaned.lastIndexOf('.');
+    const digitsAfter = cleaned.length - lastDot - 1;
+    const normalised =
+      digitsAfter === 3 && cleaned.length > 4 ? cleaned.replace(/\./g, '') : cleaned;
+    const numeric = Number.parseFloat(normalised);
+    return Number.isNaN(numeric) ? null : numeric;
+  }
+
+  const numeric = Number.parseFloat(cleaned);
+  return Number.isNaN(numeric) ? null : numeric;
+};
+
+const parseIntegerLike = (value) => {
+  const numeric = sanitiseNumericInput(value);
+  if (numeric === null) {
+    return null;
+  }
+  const integer = Math.round(numeric);
+  return Number.isFinite(integer) ? integer : null;
+};
+
 const resolveFunnelWeight = (stage, rawFw) => {
   const mappedLabel = FUNNEL_STAGE_TO_FW_LABEL[stage];
   if (mappedLabel && FW_VALUE_BY_LABEL[mappedLabel] !== undefined) {
@@ -329,9 +397,12 @@ const normaliseRow = (raw, { id, autoEnrich = true } = {}) => {
   };
 
   if (autoEnrich) {
-    row.volume = clampNumber(parseInt(raw.volume, 10), 0);
-    row.difficulty = clampNumber(parseInt(raw.difficulty, 10), 0, 100);
-    row.cpc = Math.max(0, Number.parseFloat(raw.cpc || 0));
+    const parsedVolume = parseIntegerLike(raw.volume);
+    const parsedDifficulty = parseIntegerLike(raw.difficulty);
+    const parsedCpc = sanitiseNumericInput(raw.cpc);
+    row.volume = clampNumber(parsedVolume === null ? 0 : parsedVolume, 0);
+    row.difficulty = clampNumber(parsedDifficulty === null ? 0 : parsedDifficulty, 0, 100);
+    row.cpc = parsedCpc === null ? 0 : Math.max(0, parsedCpc);
   } else {
     row.volume = 0;
     row.difficulty = 0;
@@ -897,8 +968,8 @@ const SheetModal = ({ open, onClose, rows }) => {
           const next = { ...row };
           switch (column.type) {
             case 'currency': {
-              const numeric = Number.parseFloat(rawValue || '0');
-              next.cpc = Number.isNaN(numeric) ? 0 : Math.max(0, numeric);
+              const numeric = sanitiseNumericInput(rawValue);
+              next.cpc = numeric === null ? 0 : Math.max(0, numeric);
               break;
             }
             case 'number': {
@@ -910,15 +981,18 @@ const SheetModal = ({ open, onClose, rows }) => {
                 }
                 break;
               }
-              const numeric = parseInt(rawValue, 10);
+              const parsed = parseIntegerLike(rawValue);
+              if (parsed === null) {
+                break;
+              }
               if (column.key === 'difficulty') {
-                next.difficulty = clampNumber(numeric, 0, 100);
+                next.difficulty = clampNumber(parsed, 0, 100);
               } else if (column.key === 'volume') {
-                next.volume = clampNumber(numeric, 0);
+                next.volume = clampNumber(parsed, 0);
               } else if (column.key === 'win') {
-                next.win = clampNumber(numeric, 0, 100);
+                next.win = clampNumber(parsed, 0, 100);
               } else {
-                next[column.key] = clampNumber(numeric, 0);
+                next[column.key] = clampNumber(parsed, 0);
               }
               break;
             }
