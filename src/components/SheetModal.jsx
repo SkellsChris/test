@@ -182,6 +182,28 @@ const resolveFunnelWeight = (stage, rawFw) => {
   return { label: DEFAULT_FW_LABEL, value: DEFAULT_FW_VALUE };
 };
 
+const resolveFwNumericValue = (label, explicitValue) => {
+  if (explicitValue !== undefined && explicitValue !== null) {
+    return explicitValue;
+  }
+  if (label && FW_VALUE_BY_LABEL[label] !== undefined) {
+    return FW_VALUE_BY_LABEL[label];
+  }
+  return null;
+};
+
+const getFwNumericValue = (row) => {
+  if (!row) {
+    return null;
+  }
+  return resolveFwNumericValue(row.fw, row.fwValue);
+};
+
+const getFwDisplayValue = (row) => {
+  const numeric = getFwNumericValue(row);
+  return numeric !== null ? numeric.toFixed(1) : '';
+};
+
 const parseWin = (value) => {
   if (value === undefined || value === null || value === '') {
     return '';
@@ -330,12 +352,7 @@ const toCsv = (rows) => {
         return escapeCell(row.cpc.toFixed(2));
       }
       if (column.key === 'fw') {
-        const numeric = row.fwValue;
-        const formatted =
-          numeric !== undefined && numeric !== null
-            ? `${numeric.toFixed(1)} (${row.fw ?? ''})`
-            : row.fw ?? '';
-        return escapeCell(formatted);
+        return escapeCell(getFwDisplayValue(row));
       }
       if (column.key === 'win' && cellValue !== '' && cellValue !== null && cellValue !== undefined) {
         return escapeCell(`${cellValue}`);
@@ -371,13 +388,7 @@ const formatCellValue = (column, row) => {
     return value.toLocaleString();
   }
   if (column.key === 'fw') {
-    if (!value) {
-      return '';
-    }
-    if (row.fwValue !== undefined && row.fwValue !== null) {
-      return `${row.fwValue.toFixed(1)} (${value})`;
-    }
-    return value;
+    return getFwDisplayValue(row);
   }
   if (column.key === 'win' && value !== '' && value !== null && value !== undefined) {
     return `${value}%`;
@@ -575,15 +586,18 @@ const SheetModal = ({ open, onClose, rows }) => {
       const matchesSearch = !debouncedSearch
         ? true
         : COLUMN_DEFS.some((column) => {
+            if (column.key === 'fw') {
+              const displayValue = getFwDisplayValue(row);
+              if (!displayValue) {
+                return false;
+              }
+              return displayValue.toString().toLowerCase().includes(debouncedSearch);
+            }
             const value = row[column.key];
             if (value === undefined || value === null) {
               return false;
             }
-            const composite =
-              column.key === 'fw' && row.fwValue !== undefined && row.fwValue !== null
-                ? `${value} ${row.fwValue}`
-                : value;
-            return composite
+            return value
               .toString()
               .toLowerCase()
               .includes(debouncedSearch);
@@ -598,15 +612,18 @@ const SheetModal = ({ open, onClose, rows }) => {
         if (!filterValue) {
           return true;
         }
+        if (column.key === 'fw') {
+          const displayValue = getFwDisplayValue(row);
+          if (!displayValue) {
+            return false;
+          }
+          return displayValue.toString().toLowerCase().includes(filterValue.toLowerCase());
+        }
         const value = row[column.key];
         if (value === undefined || value === null) {
           return false;
         }
-        const composite =
-          column.key === 'fw' && row.fwValue !== undefined && row.fwValue !== null
-            ? `${value} ${row.fwValue}`
-            : value;
-        return composite.toString().toLowerCase().includes(filterValue.toLowerCase());
+        return value.toString().toLowerCase().includes(filterValue.toLowerCase());
       });
     });
   }, [tableRows, intentFilter, stageFilter, debouncedSearch, columnFilters]);
@@ -1220,6 +1237,31 @@ const SheetModal = ({ open, onClose, rows }) => {
   };
 
   const columnFilterControl = (column) => {
+    if (column.key === 'fw') {
+      const options = [''].concat(
+        FW_OPTIONS.map((option) => {
+          const numeric = FW_VALUE_BY_LABEL[option];
+          return numeric !== undefined && numeric !== null ? numeric.toFixed(1) : '';
+        }).filter(Boolean)
+      );
+      return (
+        <select
+          value={columnFilters[column.key]}
+          onChange={(event) =>
+            setColumnFilters((previous) => ({
+              ...previous,
+              [column.key]: event.target.value,
+            }))
+          }
+        >
+          {options.map((option) => (
+            <option key={option || 'all'} value={option}>
+              {option || 'All'}
+            </option>
+          ))}
+        </select>
+      );
+    }
     if (column.type === 'intent' || column.type === 'funnel' || column.type === 'enum') {
       const options =
         column.type === 'intent'
