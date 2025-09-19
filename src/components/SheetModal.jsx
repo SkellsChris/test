@@ -662,6 +662,11 @@ const SheetModal = ({ open, onClose, rows }) => {
     return SCHEMA_FIELDS.filter((field) => field.required && !importMapping.mapping[field.key]);
   }, [importMapping]);
 
+  const handleRecalculateWs = useCallback(() => {
+    updateTableRows((previous) => [...previous]);
+    setToast('W.S. scores recalculated');
+  }, [updateTableRows, setToast]);
+
   useEffect(() => {
     if (!open) {
       document.body.style.overflow = '';
@@ -1509,6 +1514,9 @@ const SheetModal = ({ open, onClose, rows }) => {
               </button>
               <button type="button" className="button button--link" onClick={handleDownloadTemplate}>
                 Download template
+              </button>
+              <button type="button" className="button button--secondary" onClick={handleRecalculateWs}>
+                Calculate W.S.
               </button>
               <button type="button" className="button button--ghost" onClick={handleExportCsv}>
                 Export CSV
