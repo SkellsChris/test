@@ -6,6 +6,19 @@ const PAGE_SIZE_OPTIONS = [25, 50, 100];
 const INTENT_OPTIONS = ['Informational', 'Commercial', 'Transactional'];
 const FUNNEL_OPTIONS = ['Awareness', 'Consideration', 'Decision'];
 const FW_OPTIONS = ['Low', 'Medium', 'High'];
+const FW_VALUE_BY_LABEL = {
+  Low: 1.0,
+  Medium: 1.5,
+  High: 2.0,
+};
+const FUNNEL_STAGE_TO_FW_LABEL = {
+  Awareness: 'Low',
+  Consideration: 'Medium',
+  Decision: 'High',
+};
+const DEFAULT_FUNNEL_STAGE = 'Awareness';
+const DEFAULT_FW_LABEL = FUNNEL_STAGE_TO_FW_LABEL[DEFAULT_FUNNEL_STAGE];
+const DEFAULT_FW_VALUE = FW_VALUE_BY_LABEL[DEFAULT_FW_LABEL];
 const WS_OPTIONS = ['No', 'Yes'];
 
 const COLUMN_DEFS = [
@@ -16,7 +29,7 @@ const COLUMN_DEFS = [
   { key: 'cpc', label: 'CPC ($)', type: 'currency' },
   { key: 'intent', label: 'Intent', type: 'intent' },
   { key: 'funnelStage', label: 'Funnel Stage', type: 'funnel' },
-  { key: 'fw', label: 'F.W.', type: 'enum', options: FW_OPTIONS },
+  { key: 'fw', label: 'F.W.', type: 'enum', options: FW_OPTIONS, editable: false },
   { key: 'ws', label: 'W.S.', type: 'enum', options: WS_OPTIONS },
   { key: 'win', label: 'Win.', type: 'number' },
   { key: 'page', label: 'Page', type: 'text' },
@@ -55,8 +68,9 @@ const DEFAULT_ROW = {
   difficulty: 0,
   cpc: 0,
   intent: 'Informational',
-  funnelStage: 'Awareness',
-  fw: 'Medium',
+  funnelStage: DEFAULT_FUNNEL_STAGE,
+  fw: DEFAULT_FW_LABEL,
+  fwValue: DEFAULT_FW_VALUE,
   ws: 'No',
   win: '',
   page: 'Landing – Service',
@@ -120,7 +134,53 @@ const inferIntent = (primary, secondary) => {
   return 'Informational';
 };
 
-const inferFunnel = (intent) => FUNNEL_BY_INTENT[intent] || 'Awareness';
+const inferFunnel = (intent) => FUNNEL_BY_INTENT[intent] || DEFAULT_FUNNEL_STAGE;
+
+const parseFwNumeric = (value) => {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  const trimmed = value.toString().trim();
+  if (!trimmed) {
+    return null;
+  }
+  const normalised = trimmed.replace(',', '.');
+  const numeric = Number.parseFloat(normalised);
+  return Number.isNaN(numeric) ? null : numeric;
+};
+
+const resolveFunnelWeight = (stage, rawFw) => {
+  const mappedLabel = FUNNEL_STAGE_TO_FW_LABEL[stage];
+  if (mappedLabel && FW_VALUE_BY_LABEL[mappedLabel] !== undefined) {
+    return { label: mappedLabel, value: FW_VALUE_BY_LABEL[mappedLabel] };
+  }
+
+  if (rawFw !== undefined && rawFw !== null && rawFw !== '') {
+    const enumMatch = normaliseEnum(rawFw, FW_OPTIONS, '');
+    if (enumMatch) {
+      const value = FW_VALUE_BY_LABEL[enumMatch];
+      if (value !== undefined) {
+        return { label: enumMatch, value };
+      }
+    }
+
+    const numericValue = parseFwNumeric(rawFw);
+    if (numericValue !== null) {
+      const matchedEntry = Object.entries(FW_VALUE_BY_LABEL).find(([, weightValue]) =>
+        Math.abs(weightValue - numericValue) < 0.001
+      );
+      if (matchedEntry) {
+        const [label, value] = matchedEntry;
+        return { label, value };
+      }
+    }
+  }
+
+  return { label: DEFAULT_FW_LABEL, value: DEFAULT_FW_VALUE };
+};
 
 const parseWin = (value) => {
   if (value === undefined || value === null || value === '') {
@@ -145,13 +205,16 @@ const normaliseRow = (raw, { id, autoEnrich = true } = {}) => {
   const resolvedIntent = intentCandidate || inferIntent(primaryKeyword, secondaryKeyword);
   const resolvedFunnel = normaliseEnum(raw.funnelStage, FUNNEL_OPTIONS, '') || inferFunnel(resolvedIntent);
 
+  const { label: resolvedFw, value: resolvedFwValue } = resolveFunnelWeight(resolvedFunnel, raw.fw);
+
   const row = {
     ...DEFAULT_ROW,
     primaryKeyword,
     secondaryKeyword,
     intent: resolvedIntent,
     funnelStage: resolvedFunnel,
-    fw: normaliseEnum(raw.fw, FW_OPTIONS, DEFAULT_ROW.fw),
+    fw: resolvedFw,
+    fwValue: resolvedFwValue,
     ws: normaliseEnum(raw.ws, WS_OPTIONS, DEFAULT_ROW.ws),
     win: parseWin(raw.win),
     page: raw.page ? raw.page.toString().trim() : DEFAULT_ROW.page,
@@ -266,6 +329,14 @@ const toCsv = (rows) => {
       if (column.type === 'currency') {
         return escapeCell(row.cpc.toFixed(2));
       }
+      if (column.key === 'fw') {
+        const numeric = row.fwValue;
+        const formatted =
+          numeric !== undefined && numeric !== null
+            ? `${numeric.toFixed(1)} (${row.fw ?? ''})`
+            : row.fw ?? '';
+        return escapeCell(formatted);
+      }
       if (column.key === 'win' && cellValue !== '' && cellValue !== null && cellValue !== undefined) {
         return escapeCell(`${cellValue}`);
       }
@@ -298,6 +369,15 @@ const formatCellValue = (column, row) => {
   }
   if (column.type === 'number' && typeof value === 'number') {
     return value.toLocaleString();
+  }
+  if (column.key === 'fw') {
+    if (!value) {
+      return '';
+    }
+    if (row.fwValue !== undefined && row.fwValue !== null) {
+      return `${row.fwValue.toFixed(1)} (${value})`;
+    }
+    return value;
   }
   if (column.key === 'win' && value !== '' && value !== null && value !== undefined) {
     return `${value}%`;
@@ -496,7 +576,17 @@ const SheetModal = ({ open, onClose, rows }) => {
         ? true
         : COLUMN_DEFS.some((column) => {
             const value = row[column.key];
-            return value !== undefined && value !== null && value.toString().toLowerCase().includes(debouncedSearch);
+            if (value === undefined || value === null) {
+              return false;
+            }
+            const composite =
+              column.key === 'fw' && row.fwValue !== undefined && row.fwValue !== null
+                ? `${value} ${row.fwValue}`
+                : value;
+            return composite
+              .toString()
+              .toLowerCase()
+              .includes(debouncedSearch);
           });
 
       if (!matchesIntent || !matchesStage || !matchesSearch) {
@@ -512,7 +602,11 @@ const SheetModal = ({ open, onClose, rows }) => {
         if (value === undefined || value === null) {
           return false;
         }
-        return value.toString().toLowerCase().includes(filterValue.toLowerCase());
+        const composite =
+          column.key === 'fw' && row.fwValue !== undefined && row.fwValue !== null
+            ? `${value} ${row.fwValue}`
+            : value;
+        return composite.toString().toLowerCase().includes(filterValue.toLowerCase());
       });
     });
   }, [tableRows, intentFilter, stageFilter, debouncedSearch, columnFilters]);
@@ -522,6 +616,16 @@ const SheetModal = ({ open, onClose, rows }) => {
     sorted.sort((a, b) => {
       const { key, direction } = sortConfig;
       const multiplier = direction === 'asc' ? 1 : -1;
+      if (key === 'fw') {
+        const valueANum = a.fwValue ?? FW_VALUE_BY_LABEL[a.fw] ?? 0;
+        const valueBNum = b.fwValue ?? FW_VALUE_BY_LABEL[b.fw] ?? 0;
+        if (valueANum !== valueBNum) {
+          return (valueANum - valueBNum) * multiplier;
+        }
+        const labelA = a.fw ?? '';
+        const labelB = b.fw ?? '';
+        return labelA.toString().localeCompare(labelB.toString()) * multiplier;
+      }
       const valueA = a[key];
       const valueB = b[key];
 
@@ -693,14 +797,31 @@ const SheetModal = ({ open, onClose, rows }) => {
               const intentValue = normaliseEnum(rawValue, INTENT_OPTIONS, next.intent);
               next.intent = intentValue;
               next.funnelStage = inferFunnel(intentValue);
+              {
+                const { label, value } = resolveFunnelWeight(next.funnelStage);
+                next.fw = label;
+                next.fwValue = value;
+              }
               break;
             }
             case 'funnel': {
               next.funnelStage = normaliseEnum(rawValue, FUNNEL_OPTIONS, next.funnelStage);
+              {
+                const { label, value } = resolveFunnelWeight(next.funnelStage);
+                next.fw = label;
+                next.fwValue = value;
+              }
               break;
             }
             case 'enum': {
-              next[column.key] = normaliseEnum(rawValue, column.options || [], next[column.key]);
+              const normalisedEnum = normaliseEnum(rawValue, column.options || [], next[column.key]);
+              if (column.key === 'fw') {
+                const { label, value } = resolveFunnelWeight(next.funnelStage, normalisedEnum);
+                next.fw = label;
+                next.fwValue = value;
+              } else {
+                next[column.key] = normalisedEnum;
+              }
               break;
             }
             default: {
@@ -725,6 +846,10 @@ const SheetModal = ({ open, onClose, rows }) => {
   );
 
   const handleCellDoubleClick = useCallback((rowId, columnKey) => {
+    const column = COLUMN_DEFS.find((item) => item.key === columnKey);
+    if (column?.editable === false) {
+      return;
+    }
     setEditingCell({ rowId, columnKey });
   }, []);
 
@@ -1577,6 +1702,7 @@ SheetModal.propTypes = {
       intent: PropTypes.string,
       funnelStage: PropTypes.string,
       fw: PropTypes.string,
+      fwValue: PropTypes.number,
       ws: PropTypes.string,
       win: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
       page: PropTypes.string,
