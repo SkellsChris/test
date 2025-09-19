@@ -19,8 +19,6 @@ const FUNNEL_STAGE_TO_FW_LABEL = {
 const DEFAULT_FUNNEL_STAGE = 'Awareness';
 const DEFAULT_FW_LABEL = FUNNEL_STAGE_TO_FW_LABEL[DEFAULT_FUNNEL_STAGE];
 const DEFAULT_FW_VALUE = FW_VALUE_BY_LABEL[DEFAULT_FW_LABEL];
-const WS_OPTIONS = ['No', 'Yes'];
-
 const COLUMN_DEFS = [
   { key: 'primaryKeyword', label: 'Primary Keywords', type: 'text' },
   { key: 'secondaryKeyword', label: 'Secondary Keywords', type: 'text' },
@@ -30,7 +28,7 @@ const COLUMN_DEFS = [
   { key: 'intent', label: 'Intent', type: 'intent' },
   { key: 'funnelStage', label: 'Funnel Stage', type: 'funnel' },
   { key: 'fw', label: 'F.W.', type: 'enum', options: FW_OPTIONS, editable: false },
-  { key: 'ws', label: 'W.S.', type: 'enum', options: WS_OPTIONS },
+  { key: 'ws', label: 'W.S.', type: 'number', editable: false },
   { key: 'win', label: 'Win.', type: 'number' },
   { key: 'page', label: 'Page', type: 'text' },
 ];
@@ -71,7 +69,7 @@ const DEFAULT_ROW = {
   funnelStage: DEFAULT_FUNNEL_STAGE,
   fw: DEFAULT_FW_LABEL,
   fwValue: DEFAULT_FW_VALUE,
-  ws: 'No',
+  ws: 0,
   win: '',
   page: 'Landing – Service',
 };
@@ -204,6 +202,95 @@ const getFwDisplayValue = (row) => {
   return numeric !== null ? numeric.toFixed(1) : '';
 };
 
+const createRange = () => ({ min: Infinity, max: -Infinity });
+
+const updateRange = (range, value) => {
+  if (!Number.isFinite(value)) {
+    return;
+  }
+  range.min = Math.min(range.min, value);
+  range.max = Math.max(range.max, value);
+};
+
+const finalizeRange = (range) => {
+  if (!Number.isFinite(range.min) || !Number.isFinite(range.max) || range.min === Infinity) {
+    return { min: 0, max: 0 };
+  }
+  return range;
+};
+
+const computeNormalizationRanges = (rows) => {
+  const ranges = {
+    volume: createRange(),
+    cpc: createRange(),
+    difficulty: createRange(),
+    fw: createRange(),
+  };
+
+  rows.forEach((row) => {
+    updateRange(ranges.volume, row.volume);
+    updateRange(ranges.cpc, row.cpc);
+    updateRange(ranges.difficulty, row.difficulty);
+    updateRange(ranges.fw, getFwNumericValue(row));
+  });
+
+  return {
+    volume: finalizeRange(ranges.volume),
+    cpc: finalizeRange(ranges.cpc),
+    difficulty: finalizeRange(ranges.difficulty),
+    fw: finalizeRange(ranges.fw),
+  };
+};
+
+const normaliseMetricValue = (value, range) => {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  if (!range) {
+    return 0;
+  }
+  const { min, max } = range;
+  if (!Number.isFinite(min) || !Number.isFinite(max)) {
+    return 0;
+  }
+  if (max > min) {
+    const scaled = ((value - min) / (max - min)) * 100;
+    if (!Number.isFinite(scaled)) {
+      return 0;
+    }
+    return Math.min(Math.max(scaled, 0), 100);
+  }
+  if (value > 0) {
+    return 100;
+  }
+  return 0;
+};
+
+const computeWsScore = (row, ranges) => {
+  if (!row) {
+    return 0;
+  }
+  const nVolume = normaliseMetricValue(row.volume ?? 0, ranges.volume);
+  const nCpc = normaliseMetricValue(row.cpc ?? 0, ranges.cpc);
+  const nDifficulty = normaliseMetricValue(row.difficulty ?? 0, ranges.difficulty);
+  const fwNumeric = getFwNumericValue(row);
+  const nFw = normaliseMetricValue(fwNumeric ?? 0, ranges.fw);
+  const denominator = Math.max(nDifficulty, 1);
+  const rawScore = denominator > 0 ? ((nVolume * nCpc) / denominator) * nFw : 0;
+  if (!Number.isFinite(rawScore)) {
+    return 0;
+  }
+  return Number.parseFloat(rawScore.toFixed(4));
+};
+
+const applyWsScoreToRows = (rows) => {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return Array.isArray(rows) ? rows.map((row) => ({ ...row, ws: 0 })) : [];
+  }
+  const ranges = computeNormalizationRanges(rows);
+  return rows.map((row) => ({ ...row, ws: computeWsScore(row, ranges) }));
+};
+
 const parseWin = (value) => {
   if (value === undefined || value === null || value === '') {
     return '';
@@ -237,7 +324,6 @@ const normaliseRow = (raw, { id, autoEnrich = true } = {}) => {
     funnelStage: resolvedFunnel,
     fw: resolvedFw,
     fwValue: resolvedFwValue,
-    ws: normaliseEnum(raw.ws, WS_OPTIONS, DEFAULT_ROW.ws),
     win: parseWin(raw.win),
     page: raw.page ? raw.page.toString().trim() : DEFAULT_ROW.page,
   };
@@ -255,6 +341,14 @@ const normaliseRow = (raw, { id, autoEnrich = true } = {}) => {
   row.id = raw.id || id || createId();
 
   return row;
+};
+
+const prepareTableRows = (rows) => {
+  if (!Array.isArray(rows)) {
+    return [];
+  }
+  const normalised = rows.map((row) => normaliseRow(row)).filter(Boolean);
+  return applyWsScoreToRows(normalised);
 };
 
 const detectSeparator = (sample, fallback = ',') => {
@@ -351,6 +445,9 @@ const toCsv = (rows) => {
       if (column.type === 'currency') {
         return escapeCell(row.cpc.toFixed(2));
       }
+      if (column.key === 'ws' && Number.isFinite(row.ws)) {
+        return escapeCell(row.ws.toFixed(2));
+      }
       if (column.key === 'fw') {
         return escapeCell(getFwDisplayValue(row));
       }
@@ -381,6 +478,9 @@ const isLikelyNumeric = (value) => {
 
 const formatCellValue = (column, row) => {
   const value = row[column.key];
+  if (column.key === 'ws' && typeof value === 'number') {
+    return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  }
   if (column.type === 'currency') {
     return `$${Number(value || 0).toFixed(2)}`;
   }
@@ -397,7 +497,19 @@ const formatCellValue = (column, row) => {
 };
 
 const SheetModal = ({ open, onClose, rows }) => {
-  const [tableRows, setTableRows] = useState(() => rows.map((row) => normaliseRow(row)).filter(Boolean));
+  const [tableRows, setTableRows] = useState(() => prepareTableRows(rows));
+  const updateTableRows = useCallback(
+    (updater) => {
+      setTableRows((previous) => {
+        const next = typeof updater === 'function' ? updater(previous) : updater;
+        if (!Array.isArray(next)) {
+          return previous;
+        }
+        return applyWsScoreToRows(next);
+      });
+    },
+    [setTableRows]
+  );
   const [intentFilter, setIntentFilter] = useState('All');
   const [stageFilter, setStageFilter] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
@@ -434,7 +546,7 @@ const SheetModal = ({ open, onClose, rows }) => {
   }, []);
 
   useEffect(() => {
-    setTableRows(rows.map((row) => normaliseRow(row)).filter(Boolean));
+    setTableRows(prepareTableRows(rows));
   }, [rows]);
 
   useEffect(() => {
@@ -776,7 +888,7 @@ const SheetModal = ({ open, onClose, rows }) => {
         return;
       }
 
-      setTableRows((previous) =>
+      updateTableRows((previous) =>
         previous.map((row) => {
           if (row.id !== editingCell.rowId) {
             return row;
@@ -859,7 +971,7 @@ const SheetModal = ({ open, onClose, rows }) => {
 
       cancelEditing();
     },
-    [editingCell, cancelEditing]
+    [editingCell, cancelEditing, updateTableRows]
   );
 
   const handleCellDoubleClick = useCallback((rowId, columnKey) => {
@@ -874,7 +986,7 @@ const SheetModal = ({ open, onClose, rows }) => {
     if (!selectedIds.size) {
       return;
     }
-    setTableRows((previous) => previous.filter((row) => !selectedIds.has(row.id)));
+    updateTableRows((previous) => previous.filter((row) => !selectedIds.has(row.id)));
     setSelectedIds(new Set());
     setToast(`${selectedIds.size} row(s) deleted`);
   };
@@ -897,7 +1009,7 @@ const SheetModal = ({ open, onClose, rows }) => {
       return;
     }
 
-    setTableRows((previous) => {
+    updateTableRows((previous) => {
       const existingKeys = new Set(previous.map((row) => buildKeywordKey(row.primaryKeyword, row.secondaryKeyword)));
       const additions = [];
 
@@ -1745,7 +1857,7 @@ SheetModal.propTypes = {
       funnelStage: PropTypes.string,
       fw: PropTypes.string,
       fwValue: PropTypes.number,
-      ws: PropTypes.string,
+      ws: PropTypes.number,
       win: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
       page: PropTypes.string,
     })
