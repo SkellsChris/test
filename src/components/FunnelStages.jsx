@@ -1,6 +1,71 @@
 import PropTypes from 'prop-types';
 import TimeFilter from './TimeFilter.jsx';
 
+const extractGradientStops = (gradient) => {
+  if (!gradient) {
+    return ['#6b5bff', '#6b5bff'];
+  }
+
+  const rgbaMatches = gradient.match(/rgba?\([^)]*\)/g);
+  if (rgbaMatches && rgbaMatches.length > 0) {
+    const first = rgbaMatches[0];
+    const last = rgbaMatches[rgbaMatches.length - 1];
+    return [first, last];
+  }
+
+  const hexMatches = gradient.match(/#(?:[0-9a-fA-F]{3}){1,2}/g);
+  if (hexMatches && hexMatches.length > 0) {
+    const first = hexMatches[0];
+    const last = hexMatches[hexMatches.length - 1];
+    return [first, last];
+  }
+
+  return ['#6b5bff', '#6b5bff'];
+};
+
+const sanitizeId = (value) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+const FlowConnector = ({ direction, id, colors, shadow }) => (
+  <svg
+    className={`funnel-flow funnel-flow--${direction}`}
+    viewBox="0 0 280 80"
+    preserveAspectRatio="none"
+    aria-hidden="true"
+    style={{ '--funnel-flow-shadow': shadow }}
+  >
+    <defs>
+      <linearGradient id={id} x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stopColor={colors[0]} />
+        <stop offset="100%" stopColor={colors[1]} />
+      </linearGradient>
+    </defs>
+    <path
+      className="funnel-flow__path"
+      d="M0 28 C 90 4 190 4 280 28 L280 52 C190 76 90 76 0 52 Z"
+      fill={`url(#${id})`}
+    />
+    <path
+      className="funnel-flow__highlight"
+      d="M0 30 C 90 8 190 8 280 30"
+      fill="none"
+      stroke="rgba(255, 255, 255, 0.55)"
+      strokeWidth="4"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+FlowConnector.propTypes = {
+  direction: PropTypes.oneOf(['left', 'right']).isRequired,
+  id: PropTypes.string.isRequired,
+  colors: PropTypes.arrayOf(PropTypes.string).isRequired,
+  shadow: PropTypes.string,
+};
+
+FlowConnector.defaultProps = {
+  shadow: 'rgba(107, 91, 255, 0.18)',
+};
+
 const leftStages = [
   {
     label: 'Business',
@@ -104,17 +169,22 @@ const FunnelStages = ({ timeframeOptions, activeTimeframe, onTimeframeChange }) 
 
         <div className="funnel-visualization">
           <div className="funnel-column funnel-column--left">
-            {leftStages.map((stage) => (
-              <div
-                key={stage.label}
-                className="funnel-stage funnel-stage--left"
-                style={{ '--funnel-stage-gradient': stage.gradient, '--funnel-stage-shadow': stage.shadow }}
-              >
-                <span className="funnel-stage__label">{stage.label}</span>
-                <span className="funnel-stage__value">{stage.value}</span>
-                <span className="funnel-stage__flow" aria-hidden="true" />
-              </div>
-            ))}
+            {leftStages.map((stage) => {
+              const gradientStops = extractGradientStops(stage.gradient);
+              const gradientId = `funnel-flow-left-${sanitizeId(stage.label)}`;
+
+              return (
+                <div
+                  key={stage.label}
+                  className="funnel-stage funnel-stage--left"
+                  style={{ '--funnel-stage-gradient': stage.gradient, '--funnel-stage-shadow': stage.shadow }}
+                >
+                  <span className="funnel-stage__label">{stage.label}</span>
+                  <span className="funnel-stage__value">{stage.value}</span>
+                  <FlowConnector direction="left" id={gradientId} colors={gradientStops} shadow={stage.shadow} />
+                </div>
+              );
+            })}
           </div>
 
           <div className="funnel-center" aria-label="Total sales">
@@ -125,17 +195,22 @@ const FunnelStages = ({ timeframeOptions, activeTimeframe, onTimeframeChange }) 
           </div>
 
           <div className="funnel-column funnel-column--right">
-            {rightStages.map((stage) => (
-              <div
-                key={stage.label}
-                className="funnel-stage funnel-stage--right"
-                style={{ '--funnel-stage-gradient': stage.gradient, '--funnel-stage-shadow': stage.shadow }}
-              >
-                <span className="funnel-stage__label">{stage.label}</span>
-                <span className="funnel-stage__value">{stage.value}</span>
-                <span className="funnel-stage__flow" aria-hidden="true" />
-              </div>
-            ))}
+            {rightStages.map((stage) => {
+              const gradientStops = extractGradientStops(stage.gradient);
+              const gradientId = `funnel-flow-right-${sanitizeId(stage.label)}`;
+
+              return (
+                <div
+                  key={stage.label}
+                  className="funnel-stage funnel-stage--right"
+                  style={{ '--funnel-stage-gradient': stage.gradient, '--funnel-stage-shadow': stage.shadow }}
+                >
+                  <span className="funnel-stage__label">{stage.label}</span>
+                  <span className="funnel-stage__value">{stage.value}</span>
+                  <FlowConnector direction="right" id={gradientId} colors={gradientStops} shadow={stage.shadow} />
+                </div>
+              );
+            })}
           </div>
         </div>
 
