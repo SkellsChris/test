@@ -142,12 +142,14 @@ body {
 .funnel-layout {
   display: flex;
   flex-direction: column;
+  width: 100%;
 }
 
 .funnel-card {
   padding: 2.4rem 2.7rem;
   position: relative;
   overflow: hidden;
+  width: 100%;
 }
 
 .funnel-card::before,
