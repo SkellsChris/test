@@ -42,6 +42,9 @@ body {
 .app {
   position: relative;
   width: 100%;
+  flex: 1 1 100%;
+  display: flex;
+  justify-content: center;
 }
 
 .background-blob {
@@ -73,6 +76,8 @@ body {
   z-index: 1;
   max-width: 1200px;
   width: 100%;
+  flex: 1 1 1200px;
+  margin: 0 auto;
 }
 
 .page-header {
