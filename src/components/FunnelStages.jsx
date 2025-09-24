@@ -1,5 +1,7 @@
+import { useMemo } from 'react';
 import PropTypes from 'prop-types';
 import TimeFilter from './TimeFilter.jsx';
+import SankeyChart from './SankeyChart.jsx';
 
 const extractGradientStops = (gradient) => {
   if (!gradient) {
@@ -23,102 +25,108 @@ const extractGradientStops = (gradient) => {
   return ['#6b5bff', '#6b5bff'];
 };
 
-const sanitizeId = (value) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-
-const FlowConnector = ({ direction, id, colors, shadow }) => (
-  <svg
-    className={`funnel-flow funnel-flow--${direction}`}
-    viewBox="0 0 280 80"
-    preserveAspectRatio="none"
-    aria-hidden="true"
-    style={{ '--funnel-flow-shadow': shadow }}
-  >
-    <defs>
-      <linearGradient id={id} x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stopColor={colors[0]} />
-        <stop offset="100%" stopColor={colors[1]} />
-      </linearGradient>
-    </defs>
-    <path
-      className="funnel-flow__path"
-      d="M0 28 C 90 4 190 4 280 28 L280 52 C190 76 90 76 0 52 Z"
-      fill={`url(#${id})`}
-    />
-    <path
-      className="funnel-flow__highlight"
-      d="M0 30 C 90 8 190 8 280 30"
-      fill="none"
-      stroke="rgba(255, 255, 255, 0.55)"
-      strokeWidth="4"
-      strokeLinecap="round"
-    />
-  </svg>
-);
-
-FlowConnector.propTypes = {
-  direction: PropTypes.oneOf(['left', 'right']).isRequired,
-  id: PropTypes.string.isRequired,
-  colors: PropTypes.arrayOf(PropTypes.string).isRequired,
-  shadow: PropTypes.string,
-};
-
-FlowConnector.defaultProps = {
-  shadow: 'rgba(107, 91, 255, 0.18)',
-};
-
-const leftStages = [
+const stageDefinitions = [
   {
+    id: 'Business',
     label: 'Business',
-    value: '$23,987',
+    side: 'left',
     gradient: 'linear-gradient(90deg, rgba(104, 96, 255, 0.85), rgba(106, 190, 255, 0.85))',
     shadow: 'rgba(96, 128, 255, 0.35)',
   },
   {
+    id: 'Presentation',
     label: 'Presentation',
-    value: '$54,641',
+    side: 'left',
     gradient: 'linear-gradient(90deg, rgba(106, 111, 255, 0.85), rgba(123, 210, 255, 0.8))',
     shadow: 'rgba(110, 149, 255, 0.35)',
   },
   {
+    id: 'Finance',
     label: 'Finance',
-    value: '$38,120',
+    side: 'left',
     gradient: 'linear-gradient(90deg, rgba(95, 124, 255, 0.85), rgba(142, 228, 255, 0.78))',
     shadow: 'rgba(85, 144, 255, 0.3)',
   },
   {
+    id: 'Development',
     label: 'Development',
-    value: '$33,870',
+    side: 'left',
     gradient: 'linear-gradient(90deg, rgba(89, 139, 255, 0.85), rgba(162, 236, 255, 0.75))',
     shadow: 'rgba(74, 152, 255, 0.28)',
   },
-];
-
-const rightStages = [
   {
+    id: 'Investments',
     label: 'Investments',
-    value: '$76,644',
+    side: 'right',
     gradient: 'linear-gradient(90deg, rgba(255, 150, 134, 0.85), rgba(255, 206, 134, 0.85))',
     shadow: 'rgba(255, 173, 134, 0.35)',
   },
   {
+    id: 'Startup',
     label: 'Startup',
-    value: '$5,752',
+    side: 'right',
     gradient: 'linear-gradient(90deg, rgba(255, 143, 171, 0.85), rgba(255, 207, 176, 0.85))',
     shadow: 'rgba(255, 164, 178, 0.32)',
   },
   {
+    id: 'Outsourcing',
     label: 'Outsourcing',
-    value: '$4,978',
+    side: 'right',
     gradient: 'linear-gradient(90deg, rgba(255, 137, 200, 0.85), rgba(255, 210, 214, 0.82))',
     shadow: 'rgba(255, 162, 208, 0.32)',
   },
   {
+    id: 'Main projects',
     label: 'Main projects',
-    value: '$98,642',
+    side: 'right',
     gradient: 'linear-gradient(90deg, rgba(255, 133, 147, 0.85), rgba(255, 192, 147, 0.85))',
     shadow: 'rgba(255, 162, 147, 0.32)',
   },
 ];
+
+const sankeyLinks = [
+  { source: 'Business', target: 'Investments', value: 9000 },
+  { source: 'Business', target: 'Startup', value: 4000 },
+  { source: 'Business', target: 'Outsourcing', value: 6000 },
+  { source: 'Business', target: 'Main projects', value: 4987 },
+  { source: 'Presentation', target: 'Investments', value: 28000 },
+  { source: 'Presentation', target: 'Startup', value: 7000 },
+  { source: 'Presentation', target: 'Outsourcing', value: 10000 },
+  { source: 'Presentation', target: 'Main projects', value: 9641 },
+  { source: 'Finance', target: 'Investments', value: 17000 },
+  { source: 'Finance', target: 'Startup', value: 2000 },
+  { source: 'Finance', target: 'Outsourcing', value: 9000 },
+  { source: 'Finance', target: 'Main projects', value: 10120 },
+  { source: 'Development', target: 'Investments', value: 7500 },
+  { source: 'Development', target: 'Startup', value: 2870 },
+  { source: 'Development', target: 'Outsourcing', value: 8500 },
+  { source: 'Development', target: 'Main projects', value: 15000 },
+];
+
+const formatCurrency = (value) => `$${value.toLocaleString('en-US')}`;
+
+const computeSankeyNodes = (definitions, links) => {
+  const sourceTotals = new Map();
+  const targetTotals = new Map();
+
+  links.forEach((link) => {
+    sourceTotals.set(link.source, (sourceTotals.get(link.source) || 0) + link.value);
+    targetTotals.set(link.target, (targetTotals.get(link.target) || 0) + link.value);
+  });
+
+  return definitions.map((definition) => {
+    const value =
+      definition.side === 'left'
+        ? sourceTotals.get(definition.id) || 0
+        : targetTotals.get(definition.id) || 0;
+
+    return {
+      ...definition,
+      value,
+      colors: extractGradientStops(definition.gradient),
+    };
+  });
+};
 
 const quickStats = [
   {
@@ -146,6 +154,11 @@ const FunnelStages = ({ timeframeOptions, activeTimeframe, onTimeframeChange }) 
   const timeframeName = activeOption ? activeOption.name : 'Overview';
   const timeframeLabel = activeOption ? activeOption.label : '';
 
+  const sankeyNodes = useMemo(() => computeSankeyNodes(stageDefinitions, sankeyLinks), []);
+
+  const leftNodes = useMemo(() => sankeyNodes.filter((node) => node.side === 'left'), [sankeyNodes]);
+  const rightNodes = useMemo(() => sankeyNodes.filter((node) => node.side === 'right'), [sankeyNodes]);
+
   return (
     <section className="card funnel-card" aria-labelledby="funnel-title">
       <header className="funnel-card__header">
@@ -167,50 +180,51 @@ const FunnelStages = ({ timeframeOptions, activeTimeframe, onTimeframeChange }) 
           <p className="funnel-card__subtitle">Track how each funnel stage contributes to your total sales.</p>
         </div>
 
-        <div className="funnel-visualization">
-          <div className="funnel-column funnel-column--left">
-            {leftStages.map((stage) => {
-              const gradientStops = extractGradientStops(stage.gradient);
-              const gradientId = `funnel-flow-left-${sanitizeId(stage.label)}`;
+        <div className="funnel-visualization" role="region" aria-label="Revenue funnel sankey diagram">
+          <SankeyChart
+            nodes={sankeyNodes}
+            links={sankeyLinks}
+            valueFormatter={formatCurrency}
+            title="Revenue funnel"
+            description="Flow of funds between acquisition stages and revenue destinations."
+          />
+        </div>
 
-              return (
-                <div
-                  key={stage.label}
-                  className="funnel-stage funnel-stage--left"
-                  style={{ '--funnel-stage-gradient': stage.gradient, '--funnel-stage-shadow': stage.shadow }}
-                >
-                  <span className="funnel-stage__label">{stage.label}</span>
-                  <span className="funnel-stage__value">{stage.value}</span>
-                  <FlowConnector direction="left" id={gradientId} colors={gradientStops} shadow={stage.shadow} />
-                </div>
-              );
-            })}
+        <div className="funnel-stage-summary" aria-label="Funnel stage totals">
+          <div className="funnel-stage-group" role="list">
+            <span className="funnel-stage-group__title">Sources</span>
+            {leftNodes.map((node) => (
+              <div
+                key={node.id}
+                role="listitem"
+                className="funnel-stage-card"
+                style={{
+                  '--stage-card-shadow': node.shadow,
+                  background: node.gradient,
+                }}
+              >
+                <span className="funnel-stage-card__label">{node.label}</span>
+                <span className="funnel-stage-card__value">{formatCurrency(node.value)}</span>
+              </div>
+            ))}
           </div>
 
-          <div className="funnel-center" aria-label="Total sales">
-            <div className="funnel-center__ring" aria-hidden="true" />
-            <span className="funnel-center__eyebrow">Total sales</span>
-            <span className="funnel-center__value">204</span>
-            <span className="funnel-center__amount">$73,870</span>
-          </div>
-
-          <div className="funnel-column funnel-column--right">
-            {rightStages.map((stage) => {
-              const gradientStops = extractGradientStops(stage.gradient);
-              const gradientId = `funnel-flow-right-${sanitizeId(stage.label)}`;
-
-              return (
-                <div
-                  key={stage.label}
-                  className="funnel-stage funnel-stage--right"
-                  style={{ '--funnel-stage-gradient': stage.gradient, '--funnel-stage-shadow': stage.shadow }}
-                >
-                  <span className="funnel-stage__label">{stage.label}</span>
-                  <span className="funnel-stage__value">{stage.value}</span>
-                  <FlowConnector direction="right" id={gradientId} colors={gradientStops} shadow={stage.shadow} />
-                </div>
-              );
-            })}
+          <div className="funnel-stage-group" role="list">
+            <span className="funnel-stage-group__title">Destinations</span>
+            {rightNodes.map((node) => (
+              <div
+                key={node.id}
+                role="listitem"
+                className="funnel-stage-card"
+                style={{
+                  '--stage-card-shadow': node.shadow,
+                  background: node.gradient,
+                }}
+              >
+                <span className="funnel-stage-card__label">{node.label}</span>
+                <span className="funnel-stage-card__value">{formatCurrency(node.value)}</span>
+              </div>
+            ))}
           </div>
         </div>
 
