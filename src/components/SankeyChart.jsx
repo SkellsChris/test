@@ -3,6 +3,22 @@ import PropTypes from 'prop-types';
 
 const sanitizeId = (value) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
+const BASE_FONT_SIZE_PX = 16;
+const LABEL_FONT_SIZE_PX = BASE_FONT_SIZE_PX * 0.95;
+const VALUE_FONT_SIZE_PX = BASE_FONT_SIZE_PX * 0.85;
+const AVERAGE_CHAR_WIDTH = 0.58;
+const LABEL_HORIZONTAL_PADDING = 28;
+
+const estimateTextWidth = (text, fontSizePx) => text.length * fontSizePx * AVERAGE_CHAR_WIDTH;
+
+const estimateNodeLabelWidth = (node, valueFormatter) => {
+  const labelWidth = estimateTextWidth(node.label || '', LABEL_FONT_SIZE_PX);
+  const formattedValue = valueFormatter ? valueFormatter(node.value) : node.value;
+  const valueWidth = estimateTextWidth(String(formattedValue ?? ''), VALUE_FONT_SIZE_PX);
+
+  return Math.max(labelWidth, valueWidth);
+};
+
 const computeSankeyLayout = (nodes, links, width, height, nodeWidth, nodeGap, margin) => {
   const sources = nodes.filter((node) => node.side === 'left');
   const targets = nodes.filter((node) => node.side === 'right');
@@ -111,9 +127,56 @@ const SankeyChart = ({
   nodeGap,
   margin,
 }) => {
+  const { resolvedWidth, resolvedMargin } = useMemo(() => {
+    const baseMargin = {
+      top: margin.top ?? 0,
+      right: margin.right ?? 0,
+      bottom: margin.bottom ?? 0,
+      left: margin.left ?? 0,
+    };
+
+    if (!nodes.length) {
+      return { resolvedWidth: width, resolvedMargin: baseMargin };
+    }
+
+    const leftNodes = nodes.filter((node) => node.side === 'left');
+    const rightNodes = nodes.filter((node) => node.side === 'right');
+
+    const maxLeftLabelWidth = leftNodes.reduce(
+      (maxWidth, node) => Math.max(maxWidth, estimateNodeLabelWidth(node, valueFormatter)),
+      0
+    );
+    const maxRightLabelWidth = rightNodes.reduce(
+      (maxWidth, node) => Math.max(maxWidth, estimateNodeLabelWidth(node, valueFormatter)),
+      0
+    );
+
+    const resolvedMarginLeft = Math.max(
+      baseMargin.left,
+      Math.ceil(maxLeftLabelWidth) + LABEL_HORIZONTAL_PADDING
+    );
+    const resolvedMarginRight = Math.max(
+      baseMargin.right,
+      Math.ceil(maxRightLabelWidth) + LABEL_HORIZONTAL_PADDING
+    );
+
+    const resolvedWidthValue =
+      width + (resolvedMarginLeft - baseMargin.left) + (resolvedMarginRight - baseMargin.right);
+
+    return {
+      resolvedWidth: resolvedWidthValue,
+      resolvedMargin: {
+        ...baseMargin,
+        left: resolvedMarginLeft,
+        right: resolvedMarginRight,
+      },
+    };
+  }, [nodes, margin, width, valueFormatter]);
+
   const layout = useMemo(
-    () => computeSankeyLayout(nodes, links, width, height, nodeWidth, nodeGap, margin),
-    [nodes, links, width, height, nodeWidth, nodeGap, margin]
+    () =>
+      computeSankeyLayout(nodes, links, resolvedWidth, height, nodeWidth, nodeGap, resolvedMargin),
+    [nodes, links, resolvedWidth, height, nodeWidth, nodeGap, resolvedMargin]
   );
   const titleId = useId();
   const descriptionId = description ? `${titleId}-desc` : undefined;
@@ -121,7 +184,7 @@ const SankeyChart = ({
   return (
     <svg
       className="sankey-chart"
-      viewBox={`0 0 ${width} ${height}`}
+      viewBox={`0 0 ${resolvedWidth} ${height}`}
       role="img"
       aria-labelledby={descriptionId ? `${titleId} ${descriptionId}` : titleId}
     >
