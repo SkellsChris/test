@@ -148,6 +148,14 @@ body {
   display: flex;
   flex-direction: column;
   width: 100%;
+  flex: 1 1 100%;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.funnel-layout > * {
+  width: 100%;
+  max-width: none;
 }
 
 .funnel-card {
