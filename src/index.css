@@ -328,17 +328,18 @@ body {
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 18px 38px var(--stage-card-shadow, rgba(107, 91, 255, 0.16));
-  color: var(--text-strong);
+  color: #ffffff;
   backdrop-filter: blur(6px);
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  text-shadow: 0 2px 10px rgba(17, 24, 39, 0.3);
 }
 
 .funnel-stage-card__label {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.85);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -346,7 +347,7 @@ body {
 .funnel-stage-card__value {
   font-size: 1.35rem;
   font-weight: 700;
-  color: var(--text-strong);
+  color: #ffffff;
 }
 
 .funnel-metrics {
