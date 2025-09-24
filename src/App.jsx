@@ -93,11 +93,13 @@ const App = () => {
                 <button type="button" className="sheet-trigger" onClick={() => setIsSheetOpen(true)}>
                   Sheet
                 </button>
-                <TimeFilter
-                  options={TIMEFRAME_OPTIONS}
-                  activeId={activeTimeframe}
-                  onSelect={setActiveTimeframe}
-                />
+                {TIMEFRAME_OPTIONS.length > 1 ? (
+                  <TimeFilter
+                    options={TIMEFRAME_OPTIONS}
+                    activeId={activeTimeframe}
+                    onSelect={setActiveTimeframe}
+                  />
+                ) : null}
               </>
             ) : null}
           </div>
