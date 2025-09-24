@@ -7,6 +7,7 @@ import SheetModal from './components/SheetModal.jsx';
 import FunnelStages from './components/FunnelStages.jsx';
 import { KEYWORD_SHEET_ROWS } from './data/keywordSheet.js';
 import { DASHBOARD_DATA, TIMEFRAME_OPTIONS } from './data/dashboardData.js';
+import medicalLogo from './assets/medical-logo.svg';
 
 const App = () => {
   const [activeTimeframe, setActiveTimeframe] = useState('TY');
@@ -67,7 +68,11 @@ const App = () => {
       <div className="background-blob background-blob--two" aria-hidden="true" />
       <div className="app-shell">
         <header className="page-header">
-          <div>
+          <div className="page-header__content">
+            <div className="page-header__brand" aria-label="Medical Plus dashboard">
+              <img src={medicalLogo} alt="Medical Plus logo" className="page-header__logo" />
+              <span className="page-header__brand-badge">Dashboard</span>
+            </div>
             <h1>{pageMetadata[activePage].title}</h1>
             <p>{pageMetadata[activePage].subtitle}</p>
             <nav className="page-nav" aria-label="Dashboard sections">
