@@ -39,6 +39,10 @@ body {
   padding: 4rem 1.5rem;
 }
 
+#root {
+  width: 100%;
+}
+
 .app {
   position: relative;
   width: 100%;
