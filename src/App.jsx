@@ -3,15 +3,12 @@ import TimeFilter from './components/TimeFilter.jsx';
 import OverviewCard from './components/OverviewCard.jsx';
 import PerformancePanel from './components/PerformancePanel.jsx';
 import TotalsPanel from './components/TotalsPanel.jsx';
-import SheetModal from './components/SheetModal.jsx';
 import FunnelStages from './components/FunnelStages.jsx';
-import { KEYWORD_SHEET_ROWS } from './data/keywordSheet.js';
 import { DASHBOARD_DATA, TIMEFRAME_OPTIONS } from './data/dashboardData.js';
 
 const App = () => {
   const [activeTimeframe, setActiveTimeframe] = useState('TY');
   const [activePage, setActivePage] = useState('overview');
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   const activeData = DASHBOARD_DATA[activeTimeframe];
 
@@ -89,23 +86,13 @@ const App = () => {
           </div>
           <div className="page-header__actions">
             {activePage === 'overview' ? (
-              <>
-                <button type="button" className="sheet-trigger" onClick={() => setIsSheetOpen(true)}>
-                  Sheet
-                </button>
-                <TimeFilter
-                  options={TIMEFRAME_OPTIONS}
-                  activeId={activeTimeframe}
-                  onSelect={setActiveTimeframe}
-                />
-              </>
+              <TimeFilter options={TIMEFRAME_OPTIONS} activeId={activeTimeframe} onSelect={setActiveTimeframe} />
             ) : null}
           </div>
         </header>
 
         {renderPage()}
       </div>
-      <SheetModal open={isSheetOpen} onClose={() => setIsSheetOpen(false)} rows={KEYWORD_SHEET_ROWS} />
     </div>
   );
 };
