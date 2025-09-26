@@ -13,6 +13,13 @@ const App = () => {
   const [activeTimeframe, setActiveTimeframe] = useState('TY');
   const [activePage, setActivePage] = useState('overview');
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [activeProject, setActiveProject] = useState('atlas-redesign');
+
+  const projectOptions = [
+    { id: 'atlas-redesign', label: 'Atlas Redesign' },
+    { id: 'aurora-insights', label: 'Aurora Insights' },
+    { id: 'nova-growth', label: 'Nova Growth' },
+  ];
 
   const activeData = DASHBOARD_DATA[activeTimeframe];
 
@@ -102,6 +109,26 @@ const App = () => {
             </nav>
           </div>
           <div className="page-header__actions">
+            <div className="project-switcher">
+              <label className="project-switcher__label" htmlFor="project-selector">
+                Projet
+              </label>
+              <select
+                id="project-selector"
+                className="project-switcher__select"
+                value={activeProject}
+                onChange={(event) => setActiveProject(event.target.value)}
+              >
+                {projectOptions.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.label}
+                  </option>
+                ))}
+              </select>
+              <button type="button" className="project-switcher__button">
+                Nouveau projet
+              </button>
+            </div>
             {activePage === 'overview' ? (
               <>
                 <button type="button" className="sheet-trigger" onClick={() => setIsSheetOpen(true)}>
