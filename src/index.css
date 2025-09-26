@@ -160,6 +160,19 @@ body {
   outline: none;
 }
 
+.project-switcher__button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.project-switcher__button:disabled:hover,
+.project-switcher__button:disabled:focus-visible {
+  box-shadow: none;
+  transform: none;
+}
+
 .page-header h1 {
   margin: 0 0 0.35rem;
   font-size: clamp(2.4rem, 3vw, 3rem);
@@ -1150,6 +1163,187 @@ body {
 .button--danger:focus-visible {
   background: rgba(239, 68, 68, 0.2);
   outline: none;
+}
+
+.new-project-modal__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(24, 18, 63, 0.55);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 1400;
+}
+
+.new-project-modal {
+  width: min(480px, 100%);
+  background: var(--surface-strong);
+  border-radius: 28px;
+  box-shadow: 0 30px 70px rgba(49, 39, 101, 0.25);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  color: var(--text-soft);
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+}
+
+.new-project-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.new-project-modal__header h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.65rem;
+  color: var(--text-strong);
+}
+
+.new-project-modal__header p {
+  margin: 0;
+}
+
+.new-project-modal__close {
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.new-project-modal__errors {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: var(--danger);
+  border-radius: 16px;
+  padding: 0.85rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.new-project-modal__errors p {
+  margin: 0;
+  font-weight: 500;
+}
+
+.new-project-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.new-project-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.new-project-modal__field label {
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.new-project-modal__field input,
+.new-project-modal__field textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 18px;
+  border: 1px solid rgba(107, 91, 255, 0.2);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--text-strong);
+  font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 3rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.new-project-modal__field textarea {
+  min-height: 120px;
+}
+
+.new-project-modal__field input:focus,
+.new-project-modal__field textarea:focus {
+  outline: none;
+  border-color: rgba(107, 91, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(107, 91, 255, 0.15);
+}
+
+.new-project-modal__field input:disabled,
+.new-project-modal__field textarea:disabled {
+  background: rgba(255, 255, 255, 0.65);
+  color: var(--text-muted);
+}
+
+.new-project-modal__field-error {
+  margin: 0;
+  color: var(--danger);
+  font-weight: 500;
+}
+
+.new-project-modal__helper {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.new-project-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.new-project-modal__actions .button {
+  min-width: 120px;
+}
+
+.app-toast {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1.2rem;
+  border-radius: 16px;
+  box-shadow: 0 20px 45px rgba(27, 22, 73, 0.25);
+  color: #fff;
+  font-weight: 600;
+  z-index: 1500;
+}
+
+.app-toast button {
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: inherit;
+  border-radius: 999px;
+  width: 28px;
+  height: 28px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-toast button:hover,
+.app-toast button:focus-visible {
+  background: rgba(255, 255, 255, 0.35);
+  outline: none;
+}
+
+.app-toast--success {
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+}
+
+.app-toast--error {
+  background: linear-gradient(135deg, #ef4444, #f87171);
 }
 
 .sheet-toolbar {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import TimeFilter from './components/TimeFilter.jsx';
 import OverviewCard from './components/OverviewCard.jsx';
 import PerformancePanel from './components/PerformancePanel.jsx';
@@ -8,18 +8,53 @@ import FunnelStages from './components/FunnelStages.jsx';
 import SeoOpportunity from './components/SeoOpportunity.jsx';
 import { KEYWORD_SHEET_ROWS } from './data/keywordSheet.js';
 import { DASHBOARD_DATA, TIMEFRAME_OPTIONS } from './data/dashboardData.js';
+import NewProjectModal from './components/NewProjectModal.jsx';
+import { createProject, fetchProjects } from './services/projects.js';
+import { isSupabaseConfigured } from './services/supabaseClient.js';
+
+const DEFAULT_PROJECTS = [
+  { id: 'atlas-redesign', label: 'Atlas Redesign', description: '' },
+  { id: 'aurora-insights', label: 'Aurora Insights', description: '' },
+  { id: 'nova-growth', label: 'Nova Growth', description: '' },
+];
+
+const normaliseProject = (project) => ({
+  id: project.id,
+  label: project.name || project.label || 'Projet sans nom',
+  description: project.description || '',
+  created_at: project.created_at || new Date().toISOString(),
+});
+
+const mergeProjects = (incoming, existing) => {
+  const seen = new Set();
+  const merged = [];
+
+  incoming.forEach((project) => {
+    if (project && project.id && !seen.has(project.id)) {
+      seen.add(project.id);
+      merged.push(project);
+    }
+  });
+
+  existing.forEach((project) => {
+    if (project && project.id && !seen.has(project.id)) {
+      seen.add(project.id);
+      merged.push(project);
+    }
+  });
+
+  return merged;
+};
 
 const App = () => {
   const [activeTimeframe, setActiveTimeframe] = useState('TY');
   const [activePage, setActivePage] = useState('overview');
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [activeProject, setActiveProject] = useState('atlas-redesign');
-
-  const projectOptions = [
-    { id: 'atlas-redesign', label: 'Atlas Redesign' },
-    { id: 'aurora-insights', label: 'Aurora Insights' },
-    { id: 'nova-growth', label: 'Nova Growth' },
-  ];
+  const [projects, setProjects] = useState(DEFAULT_PROJECTS);
+  const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
+  const [isProjectLoading, setIsProjectLoading] = useState(false);
+  const [toast, setToast] = useState(null);
 
   const activeData = DASHBOARD_DATA[activeTimeframe];
 
@@ -40,6 +75,111 @@ const App = () => {
     }),
     []
   );
+
+  useEffect(() => {
+    if (!toast) {
+      return undefined;
+    }
+
+    const timeout = setTimeout(() => {
+      setToast(null);
+    }, 4000);
+
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [toast]);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      return undefined;
+    }
+
+    let isMounted = true;
+    setIsProjectLoading(true);
+
+    fetchProjects()
+      .then((remoteProjects) => {
+        if (!isMounted || !remoteProjects || remoteProjects.length === 0) {
+          return;
+        }
+
+        const normalised = remoteProjects.map(normaliseProject);
+        setProjects((previous) => mergeProjects(normalised, previous));
+        setActiveProject((current) => {
+          if (current && normalised.some((project) => project.id === current)) {
+            return current;
+          }
+          return normalised[0]?.id || current;
+        });
+      })
+      .catch((error) => {
+        if (!isMounted) {
+          return;
+        }
+        setToast({ type: 'error', message: error?.message || 'Impossible de charger les projets.' });
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsProjectLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (projects.length === 0) {
+      return;
+    }
+
+    const exists = projects.some((project) => project.id === activeProject);
+    if (!exists) {
+      setActiveProject(projects[0].id);
+    }
+  }, [projects, activeProject]);
+
+  const handleProjectCreate = async ({ name, description }) => {
+    const trimmedName = name.trim();
+    const trimmedDescription = description.trim();
+    const optimisticProject = normaliseProject({
+      id: `temp-${Date.now()}`,
+      name: trimmedName,
+      description: trimmedDescription,
+      created_at: new Date().toISOString(),
+    });
+
+    const previousActiveProject = activeProject;
+
+    setProjects((previous) => [optimisticProject, ...previous.filter((project) => project.id !== optimisticProject.id)]);
+    setActiveProject(optimisticProject.id);
+
+    try {
+      const created = await createProject({ name: trimmedName, description: trimmedDescription });
+      const normalised = normaliseProject(created);
+
+      setProjects((previous) => {
+        const withoutOptimistic = previous.filter((project) => project.id !== optimisticProject.id);
+        const withoutDuplicate = withoutOptimistic.filter((project) => project.id !== normalised.id);
+        return [normalised, ...withoutDuplicate];
+      });
+
+      setActiveProject(normalised.id);
+      setToast({ type: 'success', message: 'Projet créé avec succès.' });
+
+      return normalised;
+    } catch (error) {
+      setProjects((previous) => previous.filter((project) => project.id !== optimisticProject.id));
+      setActiveProject(previousActiveProject);
+
+      const message = error?.message || 'Impossible de créer le projet.';
+      setToast({ type: 'error', message });
+
+      throw new Error(message);
+    }
+  };
 
   const pages = [
     { id: 'overview', label: 'Overview' },
@@ -113,14 +253,20 @@ const App = () => {
                 className="project-switcher__select"
                 value={activeProject}
                 onChange={(event) => setActiveProject(event.target.value)}
+                disabled={isProjectLoading || projects.length === 0}
               >
-                {projectOptions.map((project) => (
+                {projects.map((project) => (
                   <option key={project.id} value={project.id}>
                     {project.label}
                   </option>
                 ))}
               </select>
-              <button type="button" className="project-switcher__button">
+              <button
+                type="button"
+                className="project-switcher__button"
+                onClick={() => setIsNewProjectOpen(true)}
+                disabled={isProjectLoading}
+              >
                 Nouveau projet
               </button>
             </div>
@@ -144,6 +290,19 @@ const App = () => {
         {renderPage()}
       </div>
       <SheetModal open={isSheetOpen} onClose={() => setIsSheetOpen(false)} rows={KEYWORD_SHEET_ROWS} />
+      <NewProjectModal
+        open={isNewProjectOpen}
+        onRequestClose={() => setIsNewProjectOpen(false)}
+        onSubmit={handleProjectCreate}
+      />
+      {toast ? (
+        <div className={`app-toast app-toast--${toast.type}`} role={toast.type === 'error' ? 'alert' : 'status'}>
+          <span>{toast.message}</span>
+          <button type="button" onClick={() => setToast(null)} aria-label="Fermer la notification">
+            ×
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 };
