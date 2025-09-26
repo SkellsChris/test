@@ -215,7 +215,7 @@ const SeoOpportunity = () => {
           </ul>
 
           <div className="seo-keyword-callout">
-            <p className="seo-keyword-callout__label">Best quick win</p>
+            <p className="seo-keyword-callout__label">⭐ Best quick win</p>
             {quickWinKeyword ? (
               <>
                 <p className="seo-keyword-callout__keyword">{quickWinKeyword.topic}</p>
