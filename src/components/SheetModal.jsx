@@ -290,8 +290,7 @@ const computeWsScore = (row) => {
     return 0;
   }
 
-  const denominator = Math.max(difficulty, 1);
-  const rawScore = (volume * cpc * effectiveFw) / denominator;
+  const rawScore = (1 + difficulty) * (volume * cpc * effectiveFw);
 
   if (!Number.isFinite(rawScore)) {
     return 0;
