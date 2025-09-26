@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 
 import { classifyKeywordIntents, hasIntentClassificationCredentials } from '../services/intentClassification';
+import QuickWinIcon from './QuickWinIcon.jsx';
 
 const ROW_HEIGHT = 60;
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
@@ -301,19 +302,52 @@ const meetsQuickWinCriteria = (row) => {
 
 const resolveWinDisplayValue = (row, { includePercentSymbol = true } = {}) => {
   if (!row) {
-    return '';
+    return { text: '', quickWin: false, numeric: null };
   }
 
   if (row.quickWin) {
-    return 'Quick win';
+    return { text: 'Quick win', quickWin: true, numeric: null };
   }
 
   const rawValue = row.win;
   if (rawValue === '' || rawValue === null || rawValue === undefined) {
-    return '';
+    return { text: '', quickWin: false, numeric: null };
   }
 
-  return includePercentSymbol ? `${rawValue}%` : `${rawValue}`;
+  const numericValue =
+    typeof rawValue === 'number' && Number.isFinite(rawValue)
+      ? rawValue
+      : (() => {
+          const parsed = Number.parseFloat(rawValue);
+          return Number.isFinite(parsed) ? parsed : null;
+        })();
+
+  const baseText = numericValue !== null ? numericValue.toString() : rawValue.toString();
+  const text = includePercentSymbol ? `${baseText}%` : baseText;
+
+  return { text, quickWin: false, numeric: numericValue };
+};
+
+const getWinSortValue = (row) => {
+  if (!row) {
+    return Number.NEGATIVE_INFINITY;
+  }
+
+  if (row.quickWin) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const rawValue = row.win;
+  if (typeof rawValue === 'number' && Number.isFinite(rawValue)) {
+    return rawValue;
+  }
+
+  if (rawValue === '' || rawValue === null || rawValue === undefined) {
+    return Number.NEGATIVE_INFINITY;
+  }
+
+  const parsed = Number.parseFloat(rawValue);
+  return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
 };
 
 const computeWsScore = (row) => {
@@ -520,7 +554,7 @@ const toCsv = (rows) => {
         return escapeCell(getFwDisplayValue(row));
       }
       if (column.key === 'win') {
-        return escapeCell(resolveWinDisplayValue(row, { includePercentSymbol: false }));
+        return escapeCell(resolveWinDisplayValue(row, { includePercentSymbol: false }).text);
       }
       return escapeCell(cellValue ?? '');
     }).join(',')
@@ -559,7 +593,16 @@ const formatCellValue = (column, row) => {
     return getFwDisplayValue(row);
   }
   if (column.key === 'win') {
-    return resolveWinDisplayValue(row);
+    const displayValue = resolveWinDisplayValue(row);
+    if (displayValue.quickWin) {
+      return (
+        <span className="sheet-table__quick-win">
+          <QuickWinIcon className="sheet-table__quick-win-icon" />
+          <span className="sheet-table__quick-win-label">{displayValue.text}</span>
+        </span>
+      );
+    }
+    return displayValue.text;
   }
   return value ?? '';
 };
@@ -806,11 +849,11 @@ const SheetModal = ({ open, onClose, rows }) => {
               return displayValue.toString().toLowerCase().includes(debouncedSearch);
             }
             if (column.key === 'win') {
-              const displayValue = resolveWinDisplayValue(row);
-              if (!displayValue) {
+              const { text } = resolveWinDisplayValue(row);
+              if (!text) {
                 return false;
               }
-              return displayValue.toString().toLowerCase().includes(debouncedSearch);
+              return text.toLowerCase().includes(debouncedSearch);
             }
             const value = row[column.key];
             if (value === undefined || value === null) {
@@ -839,11 +882,11 @@ const SheetModal = ({ open, onClose, rows }) => {
           return displayValue.toString().toLowerCase().includes(filterValue.toLowerCase());
         }
         if (column.key === 'win') {
-          const displayValue = resolveWinDisplayValue(row);
-          if (!displayValue) {
+          const { text } = resolveWinDisplayValue(row);
+          if (!text) {
             return false;
           }
-          return displayValue.toString().toLowerCase().includes(filterValue.toLowerCase());
+          return text.toLowerCase().includes(filterValue.toLowerCase());
         }
         const value = row[column.key];
         if (value === undefined || value === null) {
@@ -867,6 +910,16 @@ const SheetModal = ({ open, onClose, rows }) => {
         }
         const labelA = a.fw ?? '';
         const labelB = b.fw ?? '';
+        return labelA.toString().localeCompare(labelB.toString()) * multiplier;
+      }
+      if (key === 'win') {
+        const valueANum = getWinSortValue(a);
+        const valueBNum = getWinSortValue(b);
+        if (valueANum !== valueBNum) {
+          return (valueANum - valueBNum) * multiplier;
+        }
+        const labelA = resolveWinDisplayValue(a).text;
+        const labelB = resolveWinDisplayValue(b).text;
         return labelA.toString().localeCompare(labelB.toString()) * multiplier;
       }
       const valueA = a[key];
