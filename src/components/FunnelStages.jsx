@@ -196,6 +196,36 @@ const computeQuickStats = (clusterTotals, stageTotals) => {
   ];
 };
 
+const buildStageKeywordHighlights = (rows, limit = 5) => {
+  const stageBuckets = new Map(FUNNEL_STAGE_ORDER.map((stage) => [stage, []]));
+
+  rows.forEach((row) => {
+    const stage = row.funnelStage ? row.funnelStage.trim() : '';
+
+    if (!stageBuckets.has(stage)) {
+      return;
+    }
+
+    stageBuckets.get(stage).push({
+      id: row.id,
+      primaryKeyword: row.primaryKeyword,
+      cluster: row.cluster,
+      volume: safeVolume(row.volume),
+    });
+  });
+
+  stageBuckets.forEach((keywords, stage) => {
+    const sorted = keywords
+      .filter((keyword) => keyword.primaryKeyword && keyword.volume > 0)
+      .sort((a, b) => b.volume - a.volume)
+      .slice(0, limit);
+
+    stageBuckets.set(stage, sorted);
+  });
+
+  return stageBuckets;
+};
+
 const computeSankeyNodes = (definitions, links) => {
   const sourceTotals = new Map();
   const targetTotals = new Map();
@@ -233,6 +263,7 @@ const FunnelStages = ({ timeframeOptions, activeTimeframe, onTimeframeChange }) 
 
   const leftNodes = useMemo(() => sankeyNodes.filter((node) => node.side === 'left'), [sankeyNodes]);
   const rightNodes = useMemo(() => sankeyNodes.filter((node) => node.side === 'right'), [sankeyNodes]);
+  const stageKeywordHighlights = useMemo(() => buildStageKeywordHighlights(KEYWORD_SHEET_ROWS), []);
 
   return (
     <section className="card funnel-card" aria-labelledby="funnel-title">
@@ -311,6 +342,33 @@ const FunnelStages = ({ timeframeOptions, activeTimeframe, onTimeframeChange }) 
               <span className="funnel-metric__detail">{stat.detail}</span>
             </div>
           ))}
+        </div>
+
+        <div className="funnel-stage-keywords" aria-label="Top keywords by funnel stage">
+          {FUNNEL_STAGE_ORDER.map((stage) => {
+            const keywords = stageKeywordHighlights.get(stage) || [];
+
+            return (
+              <div key={stage} className="funnel-keyword-column">
+                <span className="funnel-keyword-column__title">{stage}</span>
+                <ul className="funnel-keyword-list" role="list">
+                  {keywords.length ? (
+                    keywords.map((keyword) => (
+                      <li key={keyword.id} className="funnel-keyword-item" role="listitem">
+                        <span className="funnel-keyword-item__keyword">{keyword.primaryKeyword}</span>
+                        <span className="funnel-keyword-item__cluster">{keyword.cluster}</span>
+                        <span className="funnel-keyword-item__volume">{formatVolume(keyword.volume)}</span>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="funnel-keyword-item funnel-keyword-item--empty" role="listitem">
+                      <span className="funnel-keyword-item__empty">Aucun mot-clé disponible</span>
+                    </li>
+                  )}
+                </ul>
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
