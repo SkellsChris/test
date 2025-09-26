@@ -626,6 +626,82 @@ body {
   color: var(--neutral);
 }
 
+.funnel-stage-keywords {
+  margin-top: 2rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+}
+
+.funnel-keyword-column {
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 18px;
+  padding: 1.25rem 1.4rem;
+  box-shadow: 0 18px 36px rgba(71, 85, 172, 0.16);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.funnel-keyword-column__title {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.funnel-keyword-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.funnel-keyword-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'keyword volume'
+    'cluster volume';
+  gap: 0.15rem 1.2rem;
+  align-items: center;
+}
+
+.funnel-keyword-item__keyword {
+  grid-area: keyword;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-strong);
+}
+
+.funnel-keyword-item__cluster {
+  grid-area: cluster;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.funnel-keyword-item__volume {
+  grid-area: volume;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--primary);
+  justify-self: flex-end;
+}
+
+.funnel-keyword-item--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.funnel-keyword-item__empty {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
 .time-filter {
   display: inline-flex;
   gap: 0.4rem;
