@@ -23,7 +23,6 @@ const DEFAULT_FW_LABEL = FUNNEL_STAGE_TO_FW_LABEL[DEFAULT_FUNNEL_STAGE];
 const DEFAULT_FW_VALUE = FW_VALUE_BY_LABEL[DEFAULT_FW_LABEL];
 const COLUMN_DEFS = [
   { key: 'primaryKeyword', label: 'Primary Keywords', type: 'text' },
-  { key: 'secondaryKeyword', label: 'Secondary Keywords', type: 'text' },
   { key: 'volume', label: 'Volume (Vol.)', type: 'number' },
   { key: 'difficulty', label: 'Difficulty (Dif.)', type: 'number' },
   { key: 'cpc', label: 'CPC ($)', type: 'currency' },
@@ -37,7 +36,6 @@ const COLUMN_DEFS = [
 
 const SCHEMA_FIELDS = [
   { key: 'primaryKeyword', label: 'Primary Keywords', required: true },
-  { key: 'secondaryKeyword', label: 'Secondary Keywords', required: false },
   { key: 'volume', label: 'Volume', required: false },
   { key: 'difficulty', label: 'Difficulty', required: false },
   { key: 'cpc', label: 'CPC', required: false },
@@ -64,7 +62,6 @@ const FUNNEL_BADGES = {
 
 const DEFAULT_ROW = {
   primaryKeyword: '',
-  secondaryKeyword: '',
   volume: 0,
   difficulty: 0,
   cpc: 0,
@@ -120,8 +117,7 @@ const normaliseKeyword = (value) => {
   return value.toString().trim().replace(/\s+/g, ' ');
 };
 
-const buildKeywordKey = (primary, secondary) =>
-  `${normaliseKeyword(primary).toLowerCase()}::${normaliseKeyword(secondary).toLowerCase()}`;
+const buildKeywordKey = (primary) => normaliseKeyword(primary).toLowerCase();
 
 const normaliseEnum = (value, options, fallback) => {
   if (!value) {
@@ -132,8 +128,8 @@ const normaliseEnum = (value, options, fallback) => {
   return match || fallback;
 };
 
-const inferIntent = (primary, secondary) => {
-  const source = `${primary || ''} ${secondary || ''}`;
+const inferIntent = (keyword) => {
+  const source = keyword || '';
   const matched = INTENT_REGEX.find(({ matcher }) => matcher.test(source));
   if (matched) {
     return matched.value;
@@ -328,10 +324,8 @@ const normaliseRow = (raw, { id, autoEnrich = true } = {}) => {
     return null;
   }
 
-  const secondaryKeyword = normaliseKeyword(raw.secondaryKeyword);
-
   const intentCandidate = normaliseEnum(raw.intent, INTENT_OPTIONS, '');
-  const resolvedIntent = intentCandidate || inferIntent(primaryKeyword, secondaryKeyword);
+  const resolvedIntent = intentCandidate || inferIntent(primaryKeyword);
   const resolvedFunnel = normaliseEnum(raw.funnelStage, FUNNEL_OPTIONS, '') || inferFunnel(resolvedIntent);
 
   const { label: resolvedFw, value: resolvedFwValue } = resolveFunnelWeight(resolvedFunnel, raw.fw);
@@ -339,7 +333,6 @@ const normaliseRow = (raw, { id, autoEnrich = true } = {}) => {
   const row = {
     ...DEFAULT_ROW,
     primaryKeyword,
-    secondaryKeyword,
     intent: resolvedIntent,
     funnelStage: resolvedFunnel,
     fw: resolvedFw,
@@ -1012,7 +1005,7 @@ const SheetModal = ({ open, onClose, rows }) => {
               break;
             }
             default: {
-              if (column.key === 'primaryKeyword' || column.key === 'secondaryKeyword') {
+              if (column.key === 'primaryKeyword') {
                 const nextValue = normaliseKeyword(rawValue);
                 if (column.key === 'primaryKeyword' && !nextValue) {
                   return next;
@@ -1118,7 +1111,7 @@ const SheetModal = ({ open, onClose, rows }) => {
     }
 
     updateTableRows((previous) => {
-      const existingKeys = new Set(previous.map((row) => buildKeywordKey(row.primaryKeyword, row.secondaryKeyword)));
+      const existingKeys = new Set(previous.map((row) => buildKeywordKey(row.primaryKeyword)));
       const additions = [];
 
       incomingRows.forEach((rawRow) => {
@@ -1128,7 +1121,7 @@ const SheetModal = ({ open, onClose, rows }) => {
           return;
         }
 
-        const key = buildKeywordKey(normalised.primaryKeyword, normalised.secondaryKeyword);
+        const key = buildKeywordKey(normalised.primaryKeyword);
         if (dedupe && existingKeys.has(key)) {
           return;
         }
@@ -1162,7 +1155,6 @@ const SheetModal = ({ open, onClose, rows }) => {
         if (treatSecondAsMetric) {
           return {
             primaryKeyword: primary,
-            secondaryKeyword: '',
             volume: second,
             difficulty: third,
             cpc: fourth,
@@ -1178,7 +1170,6 @@ const SheetModal = ({ open, onClose, rows }) => {
 
         return {
           primaryKeyword: primary,
-          secondaryKeyword: second,
           volume: third,
           difficulty: fourth,
           cpc: fifth,
@@ -1196,7 +1187,7 @@ const SheetModal = ({ open, onClose, rows }) => {
     const deduped = [];
     const seen = new Set();
     prepared.forEach((row) => {
-      const key = buildKeywordKey(row.primaryKeyword, row.secondaryKeyword);
+      const key = buildKeywordKey(row.primaryKeyword);
       if (dedupe && seen.has(key)) {
         return;
       }
@@ -1898,9 +1889,8 @@ const SheetModal = ({ open, onClose, rows }) => {
                   <h4>Preview ({pastePreview.length} row{pastePreview.length > 1 ? 's' : ''})</h4>
                   <ul>
                     {pastePreview.map((row, index) => (
-                      <li key={`${row.primaryKeyword}-${row.secondaryKeyword}-${index}`}>
+                      <li key={`${row.primaryKeyword}-${index}`}>
                         <strong>{row.primaryKeyword}</strong>
-                        {row.secondaryKeyword ? ` · ${row.secondaryKeyword}` : ''}
                       </li>
                     ))}
                   </ul>
@@ -1968,7 +1958,6 @@ SheetModal.propTypes = {
   rows: PropTypes.arrayOf(
     PropTypes.shape({
       primaryKeyword: PropTypes.string.isRequired,
-      secondaryKeyword: PropTypes.string,
       volume: PropTypes.number,
       difficulty: PropTypes.number,
       cpc: PropTypes.number,

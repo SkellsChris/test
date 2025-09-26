@@ -121,7 +121,6 @@ const buildUserPrompt = (items) => {
   const keywords = items.map((item) => ({
     index: item.index,
     primary: item.primary,
-    secondary: item.secondary,
   }));
 
   return [
@@ -209,7 +208,6 @@ export const classifyKeywordIntents = async (rows, options = {}) => {
     const items = chunk.map((row, index) => ({
       index: start + index + 1,
       primary: sanitiseKeyword(row.primaryKeyword),
-      secondary: sanitiseKeyword(row.secondaryKeyword),
     }));
 
     // eslint-disable-next-line no-await-in-loop
