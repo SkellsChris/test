@@ -23,16 +23,11 @@ const App = () => {
 
   const activeData = DASHBOARD_DATA[activeTimeframe];
 
-  const activeTimeframeLabel = useMemo(() => {
-    const option = TIMEFRAME_OPTIONS.find((item) => item.id === activeTimeframe);
-    return option ? option.name : '';
-  }, [activeTimeframe]);
-
   const pageMetadata = useMemo(
     () => ({
       overview: {
         title: 'General statistics',
-        subtitle: `Total system load${activeTimeframeLabel ? ` · ${activeTimeframeLabel}` : ''}`,
+        subtitle: 'Total system load',
       },
       funnel: {
         title: 'Funnel Stages',
@@ -43,7 +38,7 @@ const App = () => {
         subtitle: 'Map high-potential keywords to focus your optimisation efforts.',
       },
     }),
-    [activeTimeframeLabel]
+    []
   );
 
   const pages = [
