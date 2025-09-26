@@ -5,6 +5,7 @@ import PerformancePanel from './components/PerformancePanel.jsx';
 import TotalsPanel from './components/TotalsPanel.jsx';
 import SheetModal from './components/SheetModal.jsx';
 import FunnelStages from './components/FunnelStages.jsx';
+import SeoOpportunity from './components/SeoOpportunity.jsx';
 import { KEYWORD_SHEET_ROWS } from './data/keywordSheet.js';
 import { DASHBOARD_DATA, TIMEFRAME_OPTIONS } from './data/dashboardData.js';
 
@@ -30,6 +31,10 @@ const App = () => {
         title: 'Funnel Stages',
         subtitle: 'Visualise how prospects move through your revenue funnel.',
       },
+      seo: {
+        title: 'SEO Opportunity',
+        subtitle: 'Map high-potential keywords to focus your optimisation efforts.',
+      },
     }),
     [activeTimeframeLabel]
   );
@@ -37,6 +42,7 @@ const App = () => {
   const pages = [
     { id: 'overview', label: 'Overview' },
     { id: 'funnel', label: 'Funnel Stages' },
+    { id: 'seo', label: 'SEO Opportunity' },
   ];
 
   const renderPage = () => {
@@ -48,6 +54,14 @@ const App = () => {
             activeTimeframe={activeTimeframe}
             onTimeframeChange={setActiveTimeframe}
           />
+        </main>
+      );
+    }
+
+    if (activePage === 'seo') {
+      return (
+        <main className="funnel-layout">
+          <SeoOpportunity />
         </main>
       );
     }
