@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 
+import { classifyKeywordIntents, hasIntentClassificationCredentials } from '../services/intentClassification';
+
 const ROW_HEIGHT = 60;
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
-const INTENT_OPTIONS = ['Informational', 'Commercial', 'Transactional'];
+const INTENT_OPTIONS = ['Informational', 'Commercial', 'Transactional', 'Navigational'];
 const FUNNEL_OPTIONS = ['Awareness', 'Consideration', 'Decision'];
 const FW_OPTIONS = ['Low', 'Medium', 'High'];
 const FW_VALUE_BY_LABEL = {
@@ -51,6 +53,7 @@ const INTENT_BADGES = {
   Informational: 'intent--informational',
   Commercial: 'intent--commercial',
   Transactional: 'intent--transactional',
+  Navigational: 'intent--navigational',
 };
 
 const FUNNEL_BADGES = {
@@ -75,6 +78,11 @@ const DEFAULT_ROW = {
 };
 
 const INTENT_REGEX = [
+  {
+    matcher:
+      /(site officiel|official site|homepage|near me|location|direction|adresse|address|horaires|opening hours|contact|login|customer service)/i,
+    value: 'Navigational',
+  },
   { matcher: /(price|cost|tarif|combien)/i, value: 'Transactional' },
   {
     matcher: /(best|compare|vs|review|photos|before after|témoignage)/i,
@@ -86,6 +94,7 @@ const FUNNEL_BY_INTENT = {
   Transactional: 'Decision',
   Commercial: 'Consideration',
   Informational: 'Awareness',
+  Navigational: 'Consideration',
 };
 
 const createId = (() => {
@@ -550,13 +559,28 @@ const SheetModal = ({ open, onClose, rows }) => {
   const [virtualRange, setVirtualRange] = useState({ start: 0, end: 0 });
   const [editingCell, setEditingCell] = useState(null);
   const [editingValue, setEditingValue] = useState('');
+  const [isClassifying, setIsClassifying] = useState(false);
+  const [classificationMessage, setClassificationMessage] = useState('');
 
   const tableScrollRef = useRef(null);
   const fileInputRef = useRef(null);
   const editingInputRef = useRef(null);
+  const classificationAbortControllerRef = useRef(null);
+  const isMountedRef = useRef(true);
 
   const setToast = useCallback((message) => {
     setToastMessage(message);
+  }, []);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (classificationAbortControllerRef.current) {
+        classificationAbortControllerRef.current.abort();
+        classificationAbortControllerRef.current = null;
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -576,6 +600,18 @@ const SheetModal = ({ open, onClose, rows }) => {
   useEffect(() => {
     setCurrentPage(1);
   }, [intentFilter, stageFilter, debouncedSearch, columnFilters]);
+
+  useEffect(() => {
+    if (open) {
+      return;
+    }
+    if (classificationAbortControllerRef.current) {
+      classificationAbortControllerRef.current.abort();
+      classificationAbortControllerRef.current = null;
+    }
+    setIsClassifying(false);
+    setClassificationMessage('');
+  }, [open]);
 
   useEffect(() => {
     if (!toastMessage) {
@@ -1025,6 +1061,56 @@ const SheetModal = ({ open, onClose, rows }) => {
     });
   };
 
+  const classifyRowsIfNeeded = useCallback(
+    async (incomingRows) => {
+      if (!hasIntentClassificationCredentials || !incomingRows.length) {
+        return incomingRows;
+      }
+
+      const hasValidKeyword = incomingRows.some((row) => normaliseKeyword(row.primaryKeyword));
+      if (!hasValidKeyword) {
+        return incomingRows;
+      }
+
+      const controller = new AbortController();
+      if (classificationAbortControllerRef.current) {
+        classificationAbortControllerRef.current.abort();
+      }
+      classificationAbortControllerRef.current = controller;
+
+      if (isMountedRef.current) {
+        setIsClassifying(true);
+        setClassificationMessage(
+          `Analyzing ${incomingRows.length} keyword${incomingRows.length > 1 ? 's' : ''}...`
+        );
+      }
+
+      try {
+        const classified = await classifyKeywordIntents(incomingRows, { signal: controller.signal });
+        return classified;
+      } catch (error) {
+        if (controller.signal.aborted || error.name === 'AbortError') {
+          return incomingRows;
+        }
+        // eslint-disable-next-line no-console
+        console.error('Intent classification failed', error);
+        if (isMountedRef.current) {
+          setToast('Automatic intent detection failed. Defaults applied.');
+        }
+        return incomingRows;
+      } finally {
+        if (isMountedRef.current) {
+          setIsClassifying(false);
+          setClassificationMessage('');
+        }
+        if (classificationAbortControllerRef.current === controller) {
+          classificationAbortControllerRef.current = null;
+        }
+      }
+    },
+    [setToast]
+  );
+
   const commitRows = (incomingRows, { dedupe }) => {
     if (!incomingRows.length) {
       setToast('No new keywords detected');
@@ -1157,9 +1243,10 @@ const SheetModal = ({ open, onClose, rows }) => {
     }
   };
 
-  const handlePasteAdd = () => {
+  const handlePasteAdd = async () => {
     const prepared = parsePastedRecords();
-    commitRows(prepared, { dedupe: pasteOptions.dedupe });
+    const rowsToCommit = prepared.length ? await classifyRowsIfNeeded(prepared) : prepared;
+    commitRows(rowsToCommit, { dedupe: pasteOptions.dedupe });
     setPastePanelOpen(false);
     setPastePreview([]);
     setPasteText('');
@@ -1250,7 +1337,7 @@ const SheetModal = ({ open, onClose, rows }) => {
     setImportMapping(null);
   };
 
-  const confirmImportMapping = () => {
+  const confirmImportMapping = async () => {
     if (!importMapping) {
       return;
     }
@@ -1274,7 +1361,8 @@ const SheetModal = ({ open, onClose, rows }) => {
       return result;
     });
 
-    commitRows(prepared, { dedupe: true });
+    const enriched = await classifyRowsIfNeeded(prepared);
+    commitRows(enriched, { dedupe: true });
     setImportMapping(null);
   };
 
@@ -1440,7 +1528,13 @@ const SheetModal = ({ open, onClose, rows }) => {
   return (
     <div className="sheet-modal" role="dialog" aria-modal="true" aria-labelledby="sheet-modal-title">
       <button type="button" className="sheet-modal__backdrop" onClick={onClose} aria-label="Close keyword sheet overlay" />
-      <div className="sheet-modal__container" role="document">
+      <div className="sheet-modal__container" role="document" aria-busy={isClassifying}>
+        {isClassifying && (
+          <div className="sheet-modal__loading" role="status" aria-live="polite">
+            <div className="sheet-modal__spinner" aria-hidden="true" />
+            <p>{classificationMessage || 'Analyzing keywords...'}</p>
+          </div>
+        )}
         <header className="sheet-modal__topbar">
           <div className="sheet-modal__headline">
             <div className="sheet-modal__title-block">
