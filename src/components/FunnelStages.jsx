@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import PropTypes from 'prop-types';
 import TimeFilter from './TimeFilter.jsx';
 import SankeyChart from './SankeyChart.jsx';
+import { KEYWORD_SHEET_ROWS } from '../data/keywordSheet.js';
 
 const extractGradientStops = (gradient) => {
   if (!gradient) {
@@ -25,85 +26,175 @@ const extractGradientStops = (gradient) => {
   return ['#6b5bff', '#6b5bff'];
 };
 
-const stageDefinitions = [
+const CLUSTER_PALETTE = [
   {
-    id: 'Business',
-    label: 'Business',
-    side: 'left',
     gradient: 'linear-gradient(90deg, rgba(104, 96, 255, 0.85), rgba(106, 190, 255, 0.85))',
     shadow: 'rgba(96, 128, 255, 0.35)',
   },
   {
-    id: 'Presentation',
-    label: 'Presentation',
-    side: 'left',
     gradient: 'linear-gradient(90deg, rgba(106, 111, 255, 0.85), rgba(123, 210, 255, 0.8))',
     shadow: 'rgba(110, 149, 255, 0.35)',
   },
   {
-    id: 'Finance',
-    label: 'Finance',
-    side: 'left',
     gradient: 'linear-gradient(90deg, rgba(95, 124, 255, 0.85), rgba(142, 228, 255, 0.78))',
     shadow: 'rgba(85, 144, 255, 0.3)',
   },
   {
-    id: 'Development',
-    label: 'Development',
-    side: 'left',
     gradient: 'linear-gradient(90deg, rgba(89, 139, 255, 0.85), rgba(162, 236, 255, 0.75))',
     shadow: 'rgba(74, 152, 255, 0.28)',
   },
   {
-    id: 'Investments',
-    label: 'Investments',
-    side: 'right',
     gradient: 'linear-gradient(90deg, rgba(255, 150, 134, 0.85), rgba(255, 206, 134, 0.85))',
     shadow: 'rgba(255, 173, 134, 0.35)',
   },
   {
-    id: 'Startup',
-    label: 'Startup',
-    side: 'right',
     gradient: 'linear-gradient(90deg, rgba(255, 143, 171, 0.85), rgba(255, 207, 176, 0.85))',
     shadow: 'rgba(255, 164, 178, 0.32)',
   },
   {
-    id: 'Outsourcing',
-    label: 'Outsourcing',
-    side: 'right',
     gradient: 'linear-gradient(90deg, rgba(255, 137, 200, 0.85), rgba(255, 210, 214, 0.82))',
     shadow: 'rgba(255, 162, 208, 0.32)',
   },
   {
-    id: 'Main projects',
-    label: 'Main projects',
-    side: 'right',
     gradient: 'linear-gradient(90deg, rgba(255, 133, 147, 0.85), rgba(255, 192, 147, 0.85))',
     shadow: 'rgba(255, 162, 147, 0.32)',
   },
 ];
 
-const sankeyLinks = [
-  { source: 'Business', target: 'Investments', value: 9000 },
-  { source: 'Business', target: 'Startup', value: 4000 },
-  { source: 'Business', target: 'Outsourcing', value: 6000 },
-  { source: 'Business', target: 'Main projects', value: 4987 },
-  { source: 'Presentation', target: 'Investments', value: 28000 },
-  { source: 'Presentation', target: 'Startup', value: 7000 },
-  { source: 'Presentation', target: 'Outsourcing', value: 10000 },
-  { source: 'Presentation', target: 'Main projects', value: 9641 },
-  { source: 'Finance', target: 'Investments', value: 17000 },
-  { source: 'Finance', target: 'Startup', value: 2000 },
-  { source: 'Finance', target: 'Outsourcing', value: 9000 },
-  { source: 'Finance', target: 'Main projects', value: 10120 },
-  { source: 'Development', target: 'Investments', value: 7500 },
-  { source: 'Development', target: 'Startup', value: 2870 },
-  { source: 'Development', target: 'Outsourcing', value: 8500 },
-  { source: 'Development', target: 'Main projects', value: 15000 },
-];
+const FUNNEL_STAGE_STYLES = {
+  Awareness: {
+    gradient: 'linear-gradient(90deg, rgba(90, 205, 250, 0.85), rgba(126, 229, 255, 0.85))',
+    shadow: 'rgba(90, 205, 250, 0.32)',
+  },
+  Consideration: {
+    gradient: 'linear-gradient(90deg, rgba(255, 196, 110, 0.85), rgba(255, 221, 160, 0.85))',
+    shadow: 'rgba(255, 196, 110, 0.32)',
+  },
+  Decision: {
+    gradient: 'linear-gradient(90deg, rgba(255, 149, 182, 0.85), rgba(255, 182, 210, 0.85))',
+    shadow: 'rgba(255, 149, 182, 0.32)',
+  },
+};
 
-const formatCurrency = (value) => `$${value.toLocaleString('en-US')}`;
+const FUNNEL_STAGE_ORDER = ['Awareness', 'Consideration', 'Decision'];
+
+const formatVolume = (value) => value.toLocaleString('fr-FR');
+
+const safeVolume = (value) => {
+  if (value === undefined || value === null) {
+    return 0;
+  }
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : 0;
+};
+
+const assignClusterStyle = (index) => CLUSTER_PALETTE[index % CLUSTER_PALETTE.length];
+
+const buildFunnelDataset = (rows) => {
+  const groupedByCluster = new Map();
+
+  rows.forEach((row) => {
+    const cluster = row.cluster ? row.cluster.trim() : '';
+    const stage = row.funnelStage ? row.funnelStage.trim() : '';
+    const volume = safeVolume(row.volume);
+
+    if (!cluster || !stage || volume <= 0) {
+      return;
+    }
+
+    if (!groupedByCluster.has(cluster)) {
+      groupedByCluster.set(cluster, new Map());
+    }
+
+    const stageMap = groupedByCluster.get(cluster);
+    stageMap.set(stage, (stageMap.get(stage) || 0) + volume);
+  });
+
+  const clusterDefinitions = Array.from(groupedByCluster.keys()).map((cluster, index) => {
+    const style = assignClusterStyle(index);
+    return {
+      id: cluster,
+      label: cluster,
+      side: 'left',
+      gradient: style.gradient,
+      shadow: style.shadow,
+    };
+  });
+
+  const stageTotals = new Map(FUNNEL_STAGE_ORDER.map((stage) => [stage, 0]));
+
+  const stageDefinitions = FUNNEL_STAGE_ORDER.map((stage) => {
+    const style = FUNNEL_STAGE_STYLES[stage];
+    return {
+      id: stage,
+      label: stage,
+      side: 'right',
+      gradient: style.gradient,
+      shadow: style.shadow,
+    };
+  });
+
+  const sankeyLinks = [];
+  const clusterTotals = new Map();
+
+  groupedByCluster.forEach((stageMap, cluster) => {
+    stageMap.forEach((value, stage) => {
+      sankeyLinks.push({ source: cluster, target: stage, value });
+      clusterTotals.set(cluster, (clusterTotals.get(cluster) || 0) + value);
+      stageTotals.set(stage, (stageTotals.get(stage) || 0) + value);
+    });
+  });
+
+  const definitions = [...clusterDefinitions, ...stageDefinitions];
+  const nodes = computeSankeyNodes(definitions, sankeyLinks);
+
+  return {
+    nodes,
+    links: sankeyLinks,
+    clusterTotals,
+    stageTotals,
+  };
+};
+
+const computeQuickStats = (clusterTotals, stageTotals) => {
+  const totalVolume = Array.from(clusterTotals.values()).reduce((sum, value) => sum + value, 0);
+
+  if (!totalVolume) {
+    return [
+      { label: 'Volume total', value: '0', detail: 'Aucun volume renseigné', tone: 'neutral' },
+      { label: 'Clusters analysés', value: '0', detail: 'Aucun cluster détecté', tone: 'neutral' },
+      { label: 'Stage dominant', value: '—', detail: 'Données insuffisantes', tone: 'neutral' },
+    ];
+  }
+
+  const clusterCount = clusterTotals.size;
+  const [leadingStage, leadingValue] = Array.from(stageTotals.entries())
+    .sort((a, b) => b[1] - a[1])
+    .find((entry) => entry[1] > 0) || ['—', 0];
+
+  const leadingShare = leadingValue ? Math.round((leadingValue / totalVolume) * 100) : 0;
+
+  return [
+    {
+      label: 'Volume total',
+      value: formatVolume(totalVolume),
+      detail: 'Somme des volumes du sheet',
+      tone: 'positive',
+    },
+    {
+      label: 'Clusters analysés',
+      value: clusterCount.toString(),
+      detail: 'Groupes de mots-clés uniques',
+      tone: 'neutral',
+    },
+    {
+      label: 'Stage dominant',
+      value: leadingStage,
+      detail: leadingValue ? `${leadingShare}% du volume` : 'Répartition égale',
+      tone: 'neutral',
+    },
+  ];
+};
 
 const computeSankeyNodes = (definitions, links) => {
   const sourceTotals = new Map();
@@ -128,33 +219,17 @@ const computeSankeyNodes = (definitions, links) => {
   });
 };
 
-const quickStats = [
-  {
-    label: 'Prediction',
-    value: '875',
-    detail: '↑ 35%',
-    tone: 'positive',
-  },
-  {
-    label: 'Pulse',
-    value: '438',
-    detail: 'Stable',
-    tone: 'neutral',
-  },
-  {
-    label: 'Activity',
-    value: '438',
-    detail: '↓ 12%',
-    tone: 'negative',
-  },
-];
-
 const FunnelStages = ({ timeframeOptions, activeTimeframe, onTimeframeChange }) => {
   const activeOption = timeframeOptions.find((option) => option.id === activeTimeframe);
   const timeframeName = activeOption ? activeOption.name : 'Overview';
   const timeframeLabel = activeOption ? activeOption.label : '';
 
-  const sankeyNodes = useMemo(() => computeSankeyNodes(stageDefinitions, sankeyLinks), []);
+  const { nodes: sankeyNodes, links: sankeyLinks, clusterTotals, stageTotals } = useMemo(
+    () => buildFunnelDataset(KEYWORD_SHEET_ROWS),
+    []
+  );
+
+  const quickStats = useMemo(() => computeQuickStats(clusterTotals, stageTotals), [clusterTotals, stageTotals]);
 
   const leftNodes = useMemo(() => sankeyNodes.filter((node) => node.side === 'left'), [sankeyNodes]);
   const rightNodes = useMemo(() => sankeyNodes.filter((node) => node.side === 'right'), [sankeyNodes]);
@@ -184,9 +259,9 @@ const FunnelStages = ({ timeframeOptions, activeTimeframe, onTimeframeChange }) 
           <SankeyChart
             nodes={sankeyNodes}
             links={sankeyLinks}
-            valueFormatter={formatCurrency}
-            title="Revenue funnel"
-            description="Flow of funds between acquisition stages and revenue destinations."
+            valueFormatter={formatVolume}
+            title="Répartition des volumes par stage"
+            description="Flux des volumes de recherche entre les clusters de mots-clés et les étapes du funnel."
           />
         </div>
 
@@ -204,7 +279,7 @@ const FunnelStages = ({ timeframeOptions, activeTimeframe, onTimeframeChange }) 
                 }}
               >
                 <span className="funnel-stage-card__label">{node.label}</span>
-                <span className="funnel-stage-card__value">{formatCurrency(node.value)}</span>
+                <span className="funnel-stage-card__value">{formatVolume(node.value)}</span>
               </div>
             ))}
           </div>
@@ -222,7 +297,7 @@ const FunnelStages = ({ timeframeOptions, activeTimeframe, onTimeframeChange }) 
                 }}
               >
                 <span className="funnel-stage-card__label">{node.label}</span>
-                <span className="funnel-stage-card__value">{formatCurrency(node.value)}</span>
+                <span className="funnel-stage-card__value">{formatVolume(node.value)}</span>
               </div>
             ))}
           </div>
