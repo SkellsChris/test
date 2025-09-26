@@ -82,7 +82,6 @@ const App = () => {
       <div className="app-shell">
         <header className="page-header">
           <div className="page-header__content">
-            <div className="page-header__brand" aria-label="Medical Plus" />
             <h1>{pageMetadata[activePage].title}</h1>
             <p>{pageMetadata[activePage].subtitle}</p>
             <nav className="page-nav" aria-label="Dashboard sections">
