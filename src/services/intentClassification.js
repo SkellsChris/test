@@ -18,6 +18,24 @@ const API_MODEL =
 
 const INTENT_VALUES = ['Commercial', 'Transactional', 'Informational', 'Navigational'];
 const FUNNEL_VALUES = ['Awareness', 'Consideration', 'Decision'];
+const PAGE_VALUES = [
+  'Landing – Service',
+  'Landing – Product',
+  'Landing – Feature',
+  'Landing – Industry',
+  'Landing – Comparison',
+  'Blog – Guide',
+  'Blog – Listicle',
+  'Blog – Comparison',
+  'Blog – Case Study',
+  'Blog – News',
+  'Resource – Template',
+  'Resource – Checklist',
+  'Resource – Ebook',
+  'Resource – Webinar',
+  'FAQ Page',
+  'Support – Documentation',
+];
 const BATCH_SIZE = 20;
 
 const sanitiseKeyword = (value) => {
@@ -37,6 +55,23 @@ const normaliseLabel = (value, allowed) => {
   }
   const match = allowed.find((option) => option.toLowerCase() === trimmed.toLowerCase());
   return match || null;
+};
+
+const normalisePageLabel = (value) => {
+  if (!value) {
+    return null;
+  }
+  const trimmed = value.toString().trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const match = PAGE_VALUES.find((option) => option.toLowerCase() === trimmed.toLowerCase());
+  if (match) {
+    return match;
+  }
+
+  return trimmed;
 };
 
 const parseClassificationContent = (content) => {
@@ -93,7 +128,10 @@ const buildUserPrompt = (items) => {
     'Classify each keyword entry by determining both the search intent and funnel stage.',
     'Use only the following options for intent: Commercial, Transactional, Informational, Navigational.',
     'Use only the following options for funnel stage: Awareness, Consideration, Decision.',
-    'Return a JSON array where every object contains the properties: index, intent, funnelStage.',
+    'For each keyword, also suggest the most appropriate website page type to create for targeting it.',
+    `Choose the page type from this list when possible: ${PAGE_VALUES.join(', ')}.`,
+    'If none of the options apply, provide a concise custom page type recommendation.',
+    'Return a JSON array where every object contains the properties: index, intent, funnelStage, page.',
     'Each index must match the index provided in the payload.',
     'Payload:',
     JSON.stringify({ keywords }, null, 2),
@@ -146,10 +184,11 @@ const requestChunkClassification = async (items, { signal } = {}) => {
     }
     const intent = normaliseLabel(entry?.intent, INTENT_VALUES);
     const funnelStage = normaliseLabel(entry?.funnelStage, FUNNEL_VALUES);
-    if (!intent && !funnelStage) {
+    const page = normalisePageLabel(entry?.page);
+    if (!intent && !funnelStage && !page) {
       return;
     }
-    result.set(index, { intent, funnelStage });
+    result.set(index, { intent, funnelStage, page });
   });
 
   return result;
@@ -190,6 +229,7 @@ export const classifyKeywordIntents = async (rows, options = {}) => {
       ...row,
       intent: classification.intent || row.intent,
       funnelStage: classification.funnelStage || row.funnelStage,
+      page: classification.page || row.page,
     };
   });
 };
