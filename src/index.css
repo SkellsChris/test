@@ -375,6 +375,13 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.seo-keyword-callout__icon {
+  color: #f59e0b;
 }
 
 .seo-keyword-callout__keyword {
@@ -1199,6 +1206,35 @@ body {
   padding: 0.9rem 1.1rem;
   border-bottom: 1px solid rgba(226, 232, 240, 0.8);
   color: var(--text-strong);
+}
+
+.quick-win-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  color: #f59e0b;
+}
+
+.quick-win-icon path {
+  fill: currentColor;
+}
+
+.sheet-table__quick-win {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.sheet-table__quick-win-icon {
+  flex-shrink: 0;
+}
+
+.sheet-table__quick-win-label {
+  line-height: 1;
 }
 
 .sheet-table__cell--checkbox {

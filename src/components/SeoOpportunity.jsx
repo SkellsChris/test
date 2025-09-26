@@ -3,6 +3,7 @@ import {
   SEO_OPPORTUNITY_KEYWORDS,
   SEO_SUMMARY_METRICS,
 } from '../data/seoOpportunity.js';
+import QuickWinIcon from './QuickWinIcon.jsx';
 
 const chartWidth = 960;
 const chartHeight = 480;
@@ -215,7 +216,10 @@ const SeoOpportunity = () => {
           </ul>
 
           <div className="seo-keyword-callout">
-            <p className="seo-keyword-callout__label">⭐ Best quick win</p>
+            <p className="seo-keyword-callout__label">
+              <QuickWinIcon className="seo-keyword-callout__icon" />
+              <span>Best quick win</span>
+            </p>
             {quickWinKeyword ? (
               <>
                 <p className="seo-keyword-callout__keyword">{quickWinKeyword.topic}</p>
