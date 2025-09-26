@@ -11,6 +11,31 @@ const maxRadius = 110;
 
 const formatNumber = (value) => value.toLocaleString('en-US');
 
+const QUICK_WIN_RULES = {
+  minWs: 20,
+  maxDifficulty: 20,
+  minFw: 1.5,
+  allowedIntents: new Set(['Commercial', 'Transactional']),
+};
+
+const meetsQuickWinCriteria = (keyword) => {
+  if (!keyword) {
+    return false;
+  }
+
+  const ws = Number(keyword.ws ?? 0);
+  const difficulty = Number(keyword.difficulty ?? 0);
+  const fw = Number(keyword.fw ?? 0);
+  const intent = keyword.intent || '';
+
+  return (
+    ws > QUICK_WIN_RULES.minWs &&
+    difficulty <= QUICK_WIN_RULES.maxDifficulty &&
+    fw >= QUICK_WIN_RULES.minFw &&
+    QUICK_WIN_RULES.allowedIntents.has(intent)
+  );
+};
+
 const opportunityToneClass = {
   positive: 'seo-metric__delta--positive',
   negative: 'seo-metric__delta--negative',
@@ -28,12 +53,32 @@ const SeoOpportunity = () => {
     return Math.round(total / SEO_OPPORTUNITY_KEYWORDS.length);
   }, []);
 
-  const topKeyword = useMemo(
-    () =>
+  const highestOpportunityKeyword = useMemo(() => {
+    return (
       [...SEO_OPPORTUNITY_KEYWORDS].sort((a, b) => b.opportunity - a.opportunity)[0] ??
-      SEO_OPPORTUNITY_KEYWORDS[0],
-    []
-  );
+      SEO_OPPORTUNITY_KEYWORDS[0]
+    );
+  }, []);
+
+  const quickWinKeyword = useMemo(() => {
+    const eligible = SEO_OPPORTUNITY_KEYWORDS.filter((keyword) => meetsQuickWinCriteria(keyword));
+
+    if (!eligible.length) {
+      return null;
+    }
+
+    const [bestQuickWin] = eligible.sort((a, b) => {
+      if (b.ws !== a.ws) {
+        return b.ws - a.ws;
+      }
+      if (b.opportunity !== a.opportunity) {
+        return b.opportunity - a.opportunity;
+      }
+      return b.volume - a.volume;
+    });
+
+    return bestQuickWin;
+  }, []);
 
   const totalProjectedTraffic = useMemo(
     () =>
@@ -138,8 +183,9 @@ const SeoOpportunity = () => {
             })}
           </svg>
           <figcaption id="seo-bubble-caption" className="seo-bubble-chart__caption">
-            Highlighted keyword &ldquo;{topKeyword.shortLabel}&rdquo; offers the highest opportunity score at{' '}
-            {topKeyword.opportunity} with {formatNumber(topKeyword.volume)} monthly searches.
+            Highlighted keyword &ldquo;{highestOpportunityKeyword.shortLabel}&rdquo; offers the highest opportunity score at{' '}
+            {highestOpportunityKeyword.opportunity} with{' '}
+            {formatNumber(highestOpportunityKeyword.volume)} monthly searches.
           </figcaption>
         </figure>
 
@@ -170,10 +216,20 @@ const SeoOpportunity = () => {
 
           <div className="seo-keyword-callout">
             <p className="seo-keyword-callout__label">Best quick win</p>
-            <p className="seo-keyword-callout__keyword">{topKeyword.topic}</p>
-            <p className="seo-keyword-callout__meta">
-              Position {topKeyword.currentPosition} · Difficulty {topKeyword.difficulty}
-            </p>
+            {quickWinKeyword ? (
+              <>
+                <p className="seo-keyword-callout__keyword">{quickWinKeyword.topic}</p>
+                <p className="seo-keyword-callout__meta">
+                  Position {quickWinKeyword.currentPosition} · Difficulty {quickWinKeyword.difficulty} · W.S.{' '}
+                  {quickWinKeyword.ws} · F.W. {quickWinKeyword.fw.toFixed(1)} · Intent {quickWinKeyword.intent}
+                </p>
+              </>
+            ) : (
+              <p className="seo-keyword-callout__meta">
+                No keywords currently meet the quick win criteria (W.S. &gt; 20, Difficulty ≤ 20, F.W. ≥ 1.5, Intent
+                Commercial or Transactional).
+              </p>
+            )}
           </div>
         </aside>
       </div>
