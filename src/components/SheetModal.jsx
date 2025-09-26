@@ -13,6 +13,12 @@ const FW_VALUE_BY_LABEL = {
   Medium: 1.5,
   High: 2.0,
 };
+const QUICK_WIN_RULES = {
+  minWs: 20,
+  maxDifficulty: 20,
+  minFw: 1.5,
+  allowedIntents: new Set(['Commercial', 'Transactional']),
+};
 const FUNNEL_STAGE_TO_FW_LABEL = {
   Awareness: 'Low',
   Consideration: 'Medium',
@@ -275,6 +281,41 @@ const getFwDisplayValue = (row) => {
   return numeric !== null ? numeric.toFixed(1) : '';
 };
 
+const meetsQuickWinCriteria = (row) => {
+  if (!row) {
+    return false;
+  }
+
+  const ws = Number(row.ws ?? 0);
+  const difficulty = Number(row.difficulty ?? 0);
+  const fwNumeric = Number(getFwNumericValue(row) ?? 0);
+  const intent = row.intent || '';
+
+  return (
+    ws > QUICK_WIN_RULES.minWs &&
+    difficulty <= QUICK_WIN_RULES.maxDifficulty &&
+    fwNumeric >= QUICK_WIN_RULES.minFw &&
+    QUICK_WIN_RULES.allowedIntents.has(intent)
+  );
+};
+
+const resolveWinDisplayValue = (row, { includePercentSymbol = true } = {}) => {
+  if (!row) {
+    return '';
+  }
+
+  if (row.quickWin) {
+    return 'Quick win';
+  }
+
+  const rawValue = row.win;
+  if (rawValue === '' || rawValue === null || rawValue === undefined) {
+    return '';
+  }
+
+  return includePercentSymbol ? `${rawValue}%` : `${rawValue}`;
+};
+
 const computeWsScore = (row) => {
   if (!row) {
     return 0;
@@ -301,9 +342,16 @@ const computeWsScore = (row) => {
 
 const applyWsScoreToRows = (rows) => {
   if (!Array.isArray(rows) || rows.length === 0) {
-    return Array.isArray(rows) ? rows.map((row) => ({ ...row, ws: 0 })) : [];
+    return Array.isArray(rows)
+      ? rows.map((row) => ({ ...row, ws: 0, quickWin: meetsQuickWinCriteria({ ...row, ws: 0 }) }))
+      : [];
   }
-  return rows.map((row) => ({ ...row, ws: computeWsScore(row) }));
+  return rows.map((row) => {
+    const nextRow = { ...row };
+    nextRow.ws = computeWsScore(nextRow);
+    nextRow.quickWin = meetsQuickWinCriteria(nextRow);
+    return nextRow;
+  });
 };
 
 const parseWin = (value) => {
@@ -466,8 +514,8 @@ const toCsv = (rows) => {
       if (column.key === 'fw') {
         return escapeCell(getFwDisplayValue(row));
       }
-      if (column.key === 'win' && cellValue !== '' && cellValue !== null && cellValue !== undefined) {
-        return escapeCell(`${cellValue}`);
+      if (column.key === 'win') {
+        return escapeCell(resolveWinDisplayValue(row, { includePercentSymbol: false }));
       }
       return escapeCell(cellValue ?? '');
     }).join(',')
@@ -505,8 +553,8 @@ const formatCellValue = (column, row) => {
   if (column.key === 'fw') {
     return getFwDisplayValue(row);
   }
-  if (column.key === 'win' && value !== '' && value !== null && value !== undefined) {
-    return `${value}%`;
+  if (column.key === 'win') {
+    return resolveWinDisplayValue(row);
   }
   return value ?? '';
 };
@@ -752,6 +800,13 @@ const SheetModal = ({ open, onClose, rows }) => {
               }
               return displayValue.toString().toLowerCase().includes(debouncedSearch);
             }
+            if (column.key === 'win') {
+              const displayValue = resolveWinDisplayValue(row);
+              if (!displayValue) {
+                return false;
+              }
+              return displayValue.toString().toLowerCase().includes(debouncedSearch);
+            }
             const value = row[column.key];
             if (value === undefined || value === null) {
               return false;
@@ -773,6 +828,13 @@ const SheetModal = ({ open, onClose, rows }) => {
         }
         if (column.key === 'fw') {
           const displayValue = getFwDisplayValue(row);
+          if (!displayValue) {
+            return false;
+          }
+          return displayValue.toString().toLowerCase().includes(filterValue.toLowerCase());
+        }
+        if (column.key === 'win') {
+          const displayValue = resolveWinDisplayValue(row);
           if (!displayValue) {
             return false;
           }
