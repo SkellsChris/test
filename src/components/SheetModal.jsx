@@ -331,7 +331,12 @@ const computeWsScore = (row) => {
     return 0;
   }
 
-  const rawScore = (1 + difficulty) * (volume * cpc * effectiveFw);
+  const denominator = 1 + difficulty;
+  if (!Number.isFinite(denominator) || denominator <= 0) {
+    return 0;
+  }
+
+  const rawScore = (volume * cpc * effectiveFw) / denominator;
 
   if (!Number.isFinite(rawScore)) {
     return 0;
