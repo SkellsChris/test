@@ -846,6 +846,43 @@ body {
   animation: sheetModalEnter 320ms ease forwards;
 }
 
+.sheet-modal__loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  background: rgba(248, 250, 255, 0.78);
+  backdrop-filter: blur(10px);
+  z-index: 10;
+  text-align: center;
+  color: var(--text-strong);
+  padding: 2rem;
+  pointer-events: all;
+}
+
+.sheet-modal__loading p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.sheet-modal__spinner {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  border: 4px solid rgba(107, 91, 255, 0.25);
+  border-top-color: var(--primary);
+  animation: sheetModalSpinner 0.9s linear infinite;
+}
+
+@keyframes sheetModalSpinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .sheet-modal__topbar {
   flex-shrink: 0;
   display: flex;
@@ -1889,6 +1926,11 @@ body {
 .sheet-badge.intent--transactional {
   background: rgba(34, 197, 94, 0.16);
   color: #15803d;
+}
+
+.sheet-badge.intent--navigational {
+  background: rgba(45, 212, 191, 0.18);
+  color: #0f766e;
 }
 
 .sheet-badge.funnel--awareness {
