@@ -178,7 +178,7 @@ const computeQuickStats = (clusterTotals, stageTotals) => {
     {
       label: 'Volume total',
       value: formatVolume(totalVolume),
-      detail: 'Somme des volumes du sheet',
+      detail: 'Somme des volumes enregistrés',
       tone: 'positive',
     },
     {
