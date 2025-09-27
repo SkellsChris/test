@@ -6,6 +6,7 @@ import TotalsPanel from './components/TotalsPanel.jsx';
 import SheetModal from './components/SheetModal.jsx';
 import FunnelStages from './components/FunnelStages.jsx';
 import SeoOpportunity from './components/SeoOpportunity.jsx';
+import SheetView from './components/SheetView.jsx';
 import LogoutButton from './components/LogoutButton.jsx';
 import { KEYWORD_SHEET_ROWS } from './data/keywordSheet.js';
 import { DASHBOARD_DATA, TIMEFRAME_OPTIONS } from './data/dashboardData.js';
@@ -79,6 +80,10 @@ const App = () => {
       seo: {
         title: 'SEO Opportunity',
         subtitle: 'Map high-potential keywords to focus your optimisation efforts.',
+      },
+      sheet: {
+        title: 'Sheet',
+        subtitle: 'Browse the saved keyword rows for the active project.',
       },
     }),
     []
@@ -224,6 +229,7 @@ const App = () => {
     { id: 'overview', label: 'Overview' },
     { id: 'funnel', label: 'Funnel Stages' },
     { id: 'seo', label: 'SEO Opportunity' },
+    { id: 'sheet', label: 'Sheet' },
   ];
 
   const activeProjectRows = projectSheets[activeProject] || [];
@@ -256,6 +262,14 @@ const App = () => {
       return (
         <main className="funnel-layout">
           <SeoOpportunity rows={activeProjectRows} />
+        </main>
+      );
+    }
+
+    if (activePage === 'sheet') {
+      return (
+        <main className="funnel-layout">
+          <SheetView rows={activeProjectRows} />
         </main>
       );
     }
@@ -325,7 +339,7 @@ const App = () => {
                 {!user ? <span className="project-switcher__hint">Veuillez vous connecter</span> : null}
               </div>
             </div>
-            {activePage === 'overview' ? (
+            {activePage === 'overview' || activePage === 'sheet' || activePage === 'seo' ? (
               <>
                 <button type="button" className="sheet-trigger" onClick={() => setIsSheetOpen(true)}>
                   Sheet
