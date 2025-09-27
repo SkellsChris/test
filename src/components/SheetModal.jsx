@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 
 import { classifyKeywordIntents, hasIntentClassificationCredentials } from '../services/intentClassification';
+import { saveKeywords } from '../services/keywords.js';
 import QuickWinIcon from './QuickWinIcon.jsx';
 
 const ROW_HEIGHT = 60;
@@ -614,7 +615,7 @@ const formatCellValue = (column, row) => {
   return value ?? '';
 };
 
-const SheetModal = ({ open, onClose, rows, onRowsChange }) => {
+const SheetModal = ({ open, onClose, rows, onRowsChange, projectId }) => {
   const [tableRows, setTableRows] = useState(() => prepareTableRows(rows));
   const updateTableRows = useCallback(
     (updater) => {
@@ -1234,6 +1235,25 @@ const SheetModal = ({ open, onClose, rows, onRowsChange }) => {
     [setToast]
   );
 
+  const persistKeywords = useCallback(
+    async (entries) => {
+      if (!projectId || !entries.length) {
+        return;
+      }
+
+      try {
+        await saveKeywords({ projectId, keywords: entries });
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to persist keywords to Supabase', error);
+        if (isMountedRef.current) {
+          setToast('Unable to sync keywords with Supabase.');
+        }
+      }
+    },
+    [projectId, setToast]
+  );
+
   const commitRows = (incomingRows, { dedupe }) => {
     if (!incomingRows.length) {
       setToast('No new keywords detected');
@@ -1267,6 +1287,7 @@ const SheetModal = ({ open, onClose, rows, onRowsChange }) => {
       }
 
       setToast(`${additions.length} keyword${additions.length > 1 ? 's' : ''} added`);
+      persistKeywords(additions);
       return [...previous, ...additions];
     });
   };
@@ -2118,6 +2139,7 @@ SheetModal.propTypes = {
     })
   ).isRequired,
   onRowsChange: PropTypes.func,
+  projectId: PropTypes.string,
 };
 
 export default SheetModal;

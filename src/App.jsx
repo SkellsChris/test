@@ -361,6 +361,7 @@ const App = () => {
         onClose={() => setIsSheetOpen(false)}
         rows={activeProjectRows}
         onRowsChange={handleSheetRowsChange}
+        projectId={activeProject}
       />
       <NewProjectModal
         open={isNewProjectOpen}
