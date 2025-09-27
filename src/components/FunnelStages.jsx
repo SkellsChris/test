@@ -249,21 +249,24 @@ const computeSankeyNodes = (definitions, links) => {
   });
 };
 
-const FunnelStages = ({ timeframeOptions, activeTimeframe, onTimeframeChange }) => {
+const FunnelStages = ({ timeframeOptions, activeTimeframe, onTimeframeChange, rows }) => {
   const activeOption = timeframeOptions.find((option) => option.id === activeTimeframe);
   const timeframeName = activeOption ? activeOption.name : 'Overview';
   const timeframeLabel = activeOption ? activeOption.label : '';
 
   const { nodes: sankeyNodes, links: sankeyLinks, clusterTotals, stageTotals } = useMemo(
-    () => buildFunnelDataset(KEYWORD_SHEET_ROWS),
-    []
+    () => buildFunnelDataset(rows && rows.length > 0 ? rows : KEYWORD_SHEET_ROWS),
+    [rows]
   );
 
   const quickStats = useMemo(() => computeQuickStats(clusterTotals, stageTotals), [clusterTotals, stageTotals]);
 
   const leftNodes = useMemo(() => sankeyNodes.filter((node) => node.side === 'left'), [sankeyNodes]);
   const rightNodes = useMemo(() => sankeyNodes.filter((node) => node.side === 'right'), [sankeyNodes]);
-  const stageKeywordHighlights = useMemo(() => buildStageKeywordHighlights(KEYWORD_SHEET_ROWS), []);
+  const stageKeywordHighlights = useMemo(
+    () => buildStageKeywordHighlights(rows && rows.length > 0 ? rows : KEYWORD_SHEET_ROWS),
+    [rows]
+  );
 
   return (
     <section className="card funnel-card" aria-labelledby="funnel-title">
@@ -385,6 +388,16 @@ FunnelStages.propTypes = {
   ).isRequired,
   activeTimeframe: PropTypes.string.isRequired,
   onTimeframeChange: PropTypes.func.isRequired,
+  rows: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string,
+      primaryKeyword: PropTypes.string.isRequired,
+    })
+  ),
+};
+
+FunnelStages.defaultProps = {
+  rows: KEYWORD_SHEET_ROWS,
 };
 
 export default FunnelStages;
