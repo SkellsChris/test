@@ -90,30 +90,45 @@ const safeVolume = (value) => {
 const assignClusterStyle = (index) => CLUSTER_PALETTE[index % CLUSTER_PALETTE.length];
 
 const buildFunnelDataset = (rows) => {
-  const groupedByCluster = new Map();
+  const clusterEntries = new Map();
 
   rows.forEach((row) => {
-    const cluster = row.cluster ? row.cluster.trim() : '';
+    const primaryKeyword = row.primaryKeyword ? row.primaryKeyword.trim() : '';
     const stage = row.funnelStage ? row.funnelStage.trim() : '';
     const volume = safeVolume(row.volume);
 
-    if (!cluster || !stage || volume <= 0) {
+    if (!primaryKeyword || !FUNNEL_STAGE_ORDER.includes(stage) || volume <= 0) {
       return;
     }
 
-    if (!groupedByCluster.has(cluster)) {
-      groupedByCluster.set(cluster, new Map());
+    if (!clusterEntries.has(primaryKeyword)) {
+      clusterEntries.set(primaryKeyword, {
+        cluster: primaryKeyword,
+        totalVolume: 0,
+        stageVolumes: new Map(FUNNEL_STAGE_ORDER.map((name) => [name, 0])),
+      });
     }
 
-    const stageMap = groupedByCluster.get(cluster);
-    stageMap.set(stage, (stageMap.get(stage) || 0) + volume);
+    const entry = clusterEntries.get(primaryKeyword);
+    entry.stageVolumes.set(stage, (entry.stageVolumes.get(stage) || 0) + volume);
+    entry.totalVolume += volume;
   });
 
-  const clusterDefinitions = Array.from(groupedByCluster.keys()).map((cluster, index) => {
+  const clusterStageTable = Array.from(clusterEntries.values())
+    .map((entry) => {
+      const row = { cluster: entry.cluster, totalVolume: entry.totalVolume };
+      FUNNEL_STAGE_ORDER.forEach((stage) => {
+        row[stage] = entry.stageVolumes.get(stage) || 0;
+      });
+      return row;
+    })
+    .sort((a, b) => b.totalVolume - a.totalVolume);
+
+  const clusterDefinitions = clusterStageTable.map((clusterRow, index) => {
     const style = assignClusterStyle(index);
     return {
-      id: cluster,
-      label: cluster,
+      id: clusterRow.cluster,
+      label: clusterRow.cluster,
       side: 'left',
       gradient: style.gradient,
       shadow: style.shadow,
@@ -136,11 +151,15 @@ const buildFunnelDataset = (rows) => {
   const sankeyLinks = [];
   const clusterTotals = new Map();
 
-  groupedByCluster.forEach((stageMap, cluster) => {
-    stageMap.forEach((value, stage) => {
-      sankeyLinks.push({ source: cluster, target: stage, value });
-      clusterTotals.set(cluster, (clusterTotals.get(cluster) || 0) + value);
-      stageTotals.set(stage, (stageTotals.get(stage) || 0) + value);
+  clusterStageTable.forEach((clusterRow) => {
+    clusterTotals.set(clusterRow.cluster, clusterRow.totalVolume);
+
+    FUNNEL_STAGE_ORDER.forEach((stage) => {
+      const stageValue = clusterRow[stage];
+      if (stageValue > 0) {
+        sankeyLinks.push({ source: clusterRow.cluster, target: stage, value: stageValue });
+        stageTotals.set(stage, (stageTotals.get(stage) || 0) + stageValue);
+      }
     });
   });
 
@@ -152,6 +171,7 @@ const buildFunnelDataset = (rows) => {
     links: sankeyLinks,
     clusterTotals,
     stageTotals,
+    clusterStageTable,
   };
 };
 
@@ -249,10 +269,13 @@ const computeSankeyNodes = (definitions, links) => {
 };
 
 const FunnelStages = ({ rows }) => {
-  const { nodes: sankeyNodes, links: sankeyLinks, clusterTotals, stageTotals } = useMemo(
-    () => buildFunnelDataset(rows && rows.length > 0 ? rows : KEYWORD_SHEET_ROWS),
-    [rows]
-  );
+  const {
+    nodes: sankeyNodes,
+    links: sankeyLinks,
+    clusterTotals,
+    stageTotals,
+    clusterStageTable,
+  } = useMemo(() => buildFunnelDataset(rows && rows.length > 0 ? rows : KEYWORD_SHEET_ROWS), [rows]);
 
   const quickStats = useMemo(() => computeQuickStats(clusterTotals, stageTotals), [clusterTotals, stageTotals]);
 
@@ -281,6 +304,42 @@ const FunnelStages = ({ rows }) => {
             title="Répartition des volumes par stage"
             description="Flux des volumes de recherche entre les clusters de mots-clés et les étapes du funnel."
           />
+        </div>
+
+        <div className="funnel-cluster-table" aria-label="Synthèse des volumes par mots-clés">
+          <table className="funnel-table">
+            <caption className="visually-hidden">Répartition des volumes par cluster et par étape du funnel</caption>
+            <thead>
+              <tr>
+                <th scope="col">Primary keyword</th>
+                <th scope="col">Volume total</th>
+                {FUNNEL_STAGE_ORDER.map((stage) => (
+                  <th key={stage} scope="col">
+                    {stage}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {clusterStageTable.length ? (
+                clusterStageTable.map((clusterRow) => (
+                  <tr key={clusterRow.cluster}>
+                    <th scope="row">{clusterRow.cluster}</th>
+                    <td>{formatVolume(clusterRow.totalVolume)}</td>
+                    {FUNNEL_STAGE_ORDER.map((stage) => (
+                      <td key={stage}>{formatVolume(clusterRow[stage])}</td>
+                    ))}
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={FUNNEL_STAGE_ORDER.length + 2} className="funnel-table__empty">
+                    Aucun volume disponible pour les mots-clés sélectionnés.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
 
         <div className="funnel-stage-summary" aria-label="Funnel stage totals">
