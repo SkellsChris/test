@@ -614,7 +614,7 @@ const formatCellValue = (column, row) => {
   return value ?? '';
 };
 
-const SheetModal = ({ open, onClose, rows }) => {
+const SheetModal = ({ open, onClose, rows, onRowsChange }) => {
   const [tableRows, setTableRows] = useState(() => prepareTableRows(rows));
   const updateTableRows = useCallback(
     (updater) => {
@@ -623,10 +623,14 @@ const SheetModal = ({ open, onClose, rows }) => {
         if (!Array.isArray(next)) {
           return previous;
         }
-        return applyWsScoreToRows(next);
+        const withScores = applyWsScoreToRows(next);
+        if (onRowsChange) {
+          onRowsChange(withScores.map((row) => ({ ...row })));
+        }
+        return withScores;
       });
     },
-    [setTableRows]
+    [setTableRows, onRowsChange]
   );
   const [intentFilter, setIntentFilter] = useState('All');
   const [stageFilter, setStageFilter] = useState('All');
@@ -2113,6 +2117,7 @@ SheetModal.propTypes = {
       page: PropTypes.string,
     })
   ).isRequired,
+  onRowsChange: PropTypes.func,
 };
 
 export default SheetModal;

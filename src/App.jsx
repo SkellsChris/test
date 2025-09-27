@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import TimeFilter from './components/TimeFilter.jsx';
 import OverviewCard from './components/OverviewCard.jsx';
 import PerformancePanel from './components/PerformancePanel.jsx';
@@ -48,6 +48,10 @@ const mergeProjects = (incoming, existing) => {
   return merged;
 };
 
+const createInitialSheetsState = () => ({
+  'atlas-redesign': KEYWORD_SHEET_ROWS.map((row) => ({ ...row })),
+});
+
 const App = () => {
   const { user } = useAuth();
   const [activeTimeframe, setActiveTimeframe] = useState('TY');
@@ -55,6 +59,7 @@ const App = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [activeProject, setActiveProject] = useState('atlas-redesign');
   const [projects, setProjects] = useState(DEFAULT_PROJECTS);
+  const [projectSheets, setProjectSheets] = useState(createInitialSheetsState);
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
   const [isProjectLoading, setIsProjectLoading] = useState(false);
   const [toast, setToast] = useState(null);
@@ -144,6 +149,22 @@ const App = () => {
     }
   }, [projects, activeProject]);
 
+  useEffect(() => {
+    setProjectSheets((previous) => {
+      const next = { ...previous };
+      let hasChanged = false;
+
+      projects.forEach((project) => {
+        if (project?.id && !next[project.id]) {
+          next[project.id] = [];
+          hasChanged = true;
+        }
+      });
+
+      return hasChanged ? next : previous;
+    });
+  }, [projects]);
+
   const handleProjectCreate = async ({ name, description }) => {
     if (!user) {
       const message = 'Veuillez vous connecter pour créer un projet.';
@@ -182,6 +203,11 @@ const App = () => {
       setActiveProject(normalised.id);
       setToast({ type: 'success', message: 'Projet créé avec succès.' });
 
+      setProjectSheets((previous) => ({
+        ...previous,
+        [normalised.id]: [],
+      }));
+
       return normalised;
     } catch (error) {
       setProjects((previous) => previous.filter((project) => project.id !== optimisticProject.id));
@@ -200,6 +226,18 @@ const App = () => {
     { id: 'seo', label: 'SEO Opportunity' },
   ];
 
+  const activeProjectRows = projectSheets[activeProject] || [];
+
+  const handleSheetRowsChange = useCallback(
+    (nextRows) => {
+      setProjectSheets((previous) => ({
+        ...previous,
+        [activeProject]: Array.isArray(nextRows) ? nextRows.map((row) => ({ ...row })) : [],
+      }));
+    },
+    [activeProject]
+  );
+
   const renderPage = () => {
     if (activePage === 'funnel') {
       return (
@@ -208,6 +246,7 @@ const App = () => {
             timeframeOptions={TIMEFRAME_OPTIONS}
             activeTimeframe={activeTimeframe}
             onTimeframeChange={setActiveTimeframe}
+            rows={activeProjectRows}
           />
         </main>
       );
@@ -216,7 +255,7 @@ const App = () => {
     if (activePage === 'seo') {
       return (
         <main className="funnel-layout">
-          <SeoOpportunity />
+          <SeoOpportunity rows={activeProjectRows} />
         </main>
       );
     }
@@ -306,7 +345,12 @@ const App = () => {
 
         {renderPage()}
       </div>
-      <SheetModal open={isSheetOpen} onClose={() => setIsSheetOpen(false)} rows={KEYWORD_SHEET_ROWS} />
+      <SheetModal
+        open={isSheetOpen}
+        onClose={() => setIsSheetOpen(false)}
+        rows={activeProjectRows}
+        onRowsChange={handleSheetRowsChange}
+      />
       <NewProjectModal
         open={isNewProjectOpen}
         onRequestClose={() => setIsNewProjectOpen(false)}
