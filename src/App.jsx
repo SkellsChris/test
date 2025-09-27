@@ -6,11 +6,13 @@ import TotalsPanel from './components/TotalsPanel.jsx';
 import SheetModal from './components/SheetModal.jsx';
 import FunnelStages from './components/FunnelStages.jsx';
 import SeoOpportunity from './components/SeoOpportunity.jsx';
+import LogoutButton from './components/LogoutButton.jsx';
 import { KEYWORD_SHEET_ROWS } from './data/keywordSheet.js';
 import { DASHBOARD_DATA, TIMEFRAME_OPTIONS } from './data/dashboardData.js';
 import NewProjectModal from './components/NewProjectModal.jsx';
 import { createProject, fetchProjects } from './services/projects.js';
 import { isSupabaseConfigured } from './services/supabaseClient.js';
+import { useAuth } from './auth/AuthProvider.jsx';
 
 const DEFAULT_PROJECTS = [
   { id: 'atlas-redesign', label: 'Atlas Redesign', description: '' },
@@ -47,6 +49,7 @@ const mergeProjects = (incoming, existing) => {
 };
 
 const App = () => {
+  const { user } = useAuth();
   const [activeTimeframe, setActiveTimeframe] = useState('TY');
   const [activePage, setActivePage] = useState('overview');
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -142,6 +145,12 @@ const App = () => {
   }, [projects, activeProject]);
 
   const handleProjectCreate = async ({ name, description }) => {
+    if (!user) {
+      const message = 'Veuillez vous connecter pour créer un projet.';
+      setToast({ type: 'error', message });
+      throw new Error(message);
+    }
+
     const trimmedName = name.trim();
     const trimmedDescription = description.trim();
     const optimisticProject = normaliseProject({
@@ -157,7 +166,11 @@ const App = () => {
     setActiveProject(optimisticProject.id);
 
     try {
-      const created = await createProject({ name: trimmedName, description: trimmedDescription });
+      const created = await createProject({
+        name: trimmedName,
+        description: trimmedDescription,
+        owner: user?.id || null,
+      });
       const normalised = normaliseProject(created);
 
       setProjects((previous) => {
@@ -261,14 +274,17 @@ const App = () => {
                   </option>
                 ))}
               </select>
-              <button
-                type="button"
-                className="project-switcher__button"
-                onClick={() => setIsNewProjectOpen(true)}
-                disabled={isProjectLoading}
-              >
-                Nouveau projet
-              </button>
+              <div className="project-switcher__actions">
+                <button
+                  type="button"
+                  className="project-switcher__button"
+                  onClick={() => setIsNewProjectOpen(true)}
+                  disabled={isProjectLoading || !user}
+                >
+                  Nouveau projet
+                </button>
+                {!user ? <span className="project-switcher__hint">Veuillez vous connecter</span> : null}
+              </div>
             </div>
             {activePage === 'overview' ? (
               <>
@@ -284,6 +300,7 @@ const App = () => {
                 ) : null}
               </>
             ) : null}
+            <LogoutButton className="page-header__logout" />
           </div>
         </header>
 

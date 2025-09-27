@@ -41,7 +41,7 @@ export const fetchProjects = async () => {
   return normalizeProjects(data);
 };
 
-export const createProject = async ({ name, description }) => {
+export const createProject = async ({ name, description, owner = null }) => {
   if (!isSupabaseConfigured) {
     throw new Error("Supabase n'est pas configuré. Impossible de créer le projet.");
   }
@@ -51,19 +51,19 @@ export const createProject = async ({ name, description }) => {
 
   const supabase = await getSupabaseClient();
 
-  // Si l’utilisateur est authentifié, on associe l’owner (policies RLS classiques)
-  let owner = null;
-  try {
-    const { data: userData } = await supabase.auth.getUser();
-    owner = userData?.user?.id || null;
-  } catch {
-    // ignore (ex: Auth non configuré)
-  }
-
   // Payload de base
   const basePayload = {
     name: name.trim(),
   };
+
+  if (!owner) {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      owner = userData?.user?.id || null;
+    } catch {
+      owner = null;
+    }
+  }
 
   if (owner) basePayload.owner = owner;
   if (description && String(description).trim().length > 0) {
