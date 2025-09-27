@@ -249,9 +249,6 @@ const App = () => {
       return (
         <main className="funnel-layout">
           <FunnelStages
-            timeframeOptions={TIMEFRAME_OPTIONS}
-            activeTimeframe={activeTimeframe}
-            onTimeframeChange={setActiveTimeframe}
             rows={activeProjectRows}
           />
         </main>
