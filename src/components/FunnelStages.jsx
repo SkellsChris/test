@@ -250,10 +250,6 @@ const computeSankeyNodes = (definitions, links) => {
 };
 
 const FunnelStages = ({ timeframeOptions, activeTimeframe, onTimeframeChange, rows }) => {
-  const activeOption = timeframeOptions.find((option) => option.id === activeTimeframe);
-  const timeframeName = activeOption ? activeOption.name : 'Overview';
-  const timeframeLabel = activeOption ? activeOption.label : '';
-
   const { nodes: sankeyNodes, links: sankeyLinks, clusterTotals, stageTotals } = useMemo(
     () => buildFunnelDataset(rows && rows.length > 0 ? rows : KEYWORD_SHEET_ROWS),
     [rows]
@@ -272,12 +268,7 @@ const FunnelStages = ({ timeframeOptions, activeTimeframe, onTimeframeChange, ro
     <section className="card funnel-card" aria-labelledby="funnel-title">
       <header className="funnel-card__header">
         <div className="funnel-card__header-block">
-          <span className="card__eyebrow">Timeline</span>
           <TimeFilter options={timeframeOptions} activeId={activeTimeframe} onSelect={onTimeframeChange} />
-        </div>
-        <div className="funnel-card__header-meta" aria-live="polite">
-          <span className="funnel-card__meta-label">{timeframeName}</span>
-          <span className="funnel-card__meta-value">{timeframeLabel}</span>
         </div>
       </header>
 
