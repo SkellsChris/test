@@ -576,6 +576,55 @@ body {
   gap: 2.4rem;
 }
 
+.funnel-cluster-table {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.funnel-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+}
+
+.funnel-table caption {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 0.75rem;
+  text-align: left;
+}
+
+.funnel-table th,
+.funnel-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(53, 63, 95, 0.12);
+}
+
+.funnel-table thead th {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(13, 20, 46, 0.7);
+}
+
+.funnel-table tbody th {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.funnel-table tbody td {
+  font-variant-numeric: tabular-nums;
+  color: rgba(13, 20, 46, 0.85);
+}
+
+.funnel-table__empty {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  color: rgba(13, 20, 46, 0.6);
+  font-style: italic;
+}
+
 .funnel-card__titles {
   text-align: center;
 }
@@ -719,6 +768,17 @@ body {
 .funnel-metric__detail {
   font-size: 0.9rem;
   font-weight: 600;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
 }
 
 .funnel-metric--positive .funnel-metric__detail {
