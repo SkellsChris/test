@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import PropTypes from 'prop-types';
-import TimeFilter from './TimeFilter.jsx';
 import SankeyChart from './SankeyChart.jsx';
 import { KEYWORD_SHEET_ROWS } from '../data/keywordSheet.js';
 
@@ -249,7 +248,7 @@ const computeSankeyNodes = (definitions, links) => {
   });
 };
 
-const FunnelStages = ({ timeframeOptions, activeTimeframe, onTimeframeChange, rows }) => {
+const FunnelStages = ({ rows }) => {
   const { nodes: sankeyNodes, links: sankeyLinks, clusterTotals, stageTotals } = useMemo(
     () => buildFunnelDataset(rows && rows.length > 0 ? rows : KEYWORD_SHEET_ROWS),
     [rows]
@@ -266,12 +265,6 @@ const FunnelStages = ({ timeframeOptions, activeTimeframe, onTimeframeChange, ro
 
   return (
     <section className="card funnel-card" aria-labelledby="funnel-title">
-      <header className="funnel-card__header">
-        <div className="funnel-card__header-block">
-          <TimeFilter options={timeframeOptions} activeId={activeTimeframe} onSelect={onTimeframeChange} />
-        </div>
-      </header>
-
       <div className="funnel-card__body">
         <div className="funnel-card__titles">
           <h2 id="funnel-title" className="funnel-card__title">
@@ -370,15 +363,6 @@ const FunnelStages = ({ timeframeOptions, activeTimeframe, onTimeframeChange, ro
 };
 
 FunnelStages.propTypes = {
-  timeframeOptions: PropTypes.arrayOf(
-    PropTypes.shape({
-      id: PropTypes.string.isRequired,
-      label: PropTypes.string.isRequired,
-      name: PropTypes.string.isRequired,
-    })
-  ).isRequired,
-  activeTimeframe: PropTypes.string.isRequired,
-  onTimeframeChange: PropTypes.func.isRequired,
   rows: PropTypes.arrayOf(
     PropTypes.shape({
       id: PropTypes.string,
