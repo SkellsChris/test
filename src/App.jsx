@@ -473,8 +473,10 @@ const App = () => {
                   className="project-switcher__button"
                   onClick={() => setIsNewProjectOpen(true)}
                   disabled={isProjectLoading || !user}
+                  aria-label="Créer un nouveau projet"
                 >
-                  Nouveau projet
+                  <span aria-hidden="true">+</span>
+                  <span className="sr-only">Créer un nouveau projet</span>
                 </button>
                 {!user ? <span className="project-switcher__hint">Veuillez vous connecter</span> : null}
               </div>
