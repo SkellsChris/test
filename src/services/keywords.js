@@ -20,7 +20,7 @@ const toStoragePayload = (projectId, keyword) => {
 export const saveKeywords = async ({ projectId, keywords }) => {
   if (!projectId) throw new Error('projectId is required to save keywords.');
   if (!Array.isArray(keywords) || keywords.length === 0) return [];
-  if (!isSupabaseConfigured()) return [];
+  if (!isSupabaseConfigured) return [];
 
   const supabase = await getSupabaseClient();
 
@@ -52,7 +52,7 @@ export const saveKeywords = async ({ projectId, keywords }) => {
  * Lecture des mots-clés d’un projet (à appeler au montage / après insert).
  */
 export const getKeywords = async (projectId) => {
-  if (!projectId || !isSupabaseConfigured()) return [];
+  if (!projectId || !isSupabaseConfigured) return [];
   const supabase = await getSupabaseClient();
 
   const { data, error } = await supabase
@@ -69,7 +69,7 @@ export const getKeywords = async (projectId) => {
  * Suppression d’un mot-clé par id.
  */
 export const removeKeyword = async (id) => {
-  if (!id || !isSupabaseConfigured()) return;
+  if (!id || !isSupabaseConfigured) return;
   const supabase = await getSupabaseClient();
   const { error } = await supabase.from('keywords').delete().eq('id', id);
   if (error) throw new Error(error.message || 'Suppression du mot-clé impossible.');
