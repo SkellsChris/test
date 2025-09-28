@@ -12,7 +12,7 @@ const minRadius = 42;
 const maxRadius = 110;
 
 const stackedChartWidth = chartWidth;
-const stackedChartHeight = 420;
+const stackedChartHeight = 560;
 const stackedChartPadding = {
   top: 36,
   right: 48,
