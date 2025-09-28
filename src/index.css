@@ -2427,13 +2427,9 @@ body {
   }
 }
 
-.radar-panel {
+.performance-panel {
   position: relative;
   overflow: hidden;
-}
-
-.radar-panel::after {
-  content: none;
 }
 
 .radar-legend {
@@ -2459,7 +2455,7 @@ body {
   background: var(--secondary);
 }
 
-.radar-chart {
+.stacked-chart {
   position: relative;
   display: flex;
   justify-content: center;
@@ -2468,49 +2464,76 @@ body {
   z-index: 1;
 }
 
-.radar-chart svg {
-  width: min(420px, 100%);
+.stacked-chart__svg {
+  width: min(520px, 100%);
   height: auto;
-  filter: drop-shadow(0 40px 80px rgba(84, 70, 255, 0.18));
+  filter: drop-shadow(0 28px 64px rgba(84, 70, 255, 0.18));
 }
 
-.radar-chart__ring {
-  fill: none;
-  stroke: rgba(118, 129, 255, 0.15);
+.stacked-chart__axes line {
+  stroke: rgba(118, 129, 255, 0.25);
   stroke-width: 1.5;
 }
 
-.radar-chart__shape {
-  fill-opacity: 0.28;
-  stroke-width: 3;
+.stacked-chart__grid line {
+  stroke: rgba(118, 129, 255, 0.18);
+  stroke-dasharray: 6 6;
+  stroke-width: 1;
 }
 
-.radar-chart__shape--primary {
-  fill: rgba(121, 109, 255, 0.25);
-  stroke: rgba(121, 109, 255, 0.7);
+.stacked-chart__grid text {
+  fill: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-anchor: end;
+  dominant-baseline: middle;
 }
 
-.radar-chart__shape--secondary {
-  fill: rgba(255, 122, 150, 0.25);
-  stroke: rgba(255, 122, 150, 0.65);
+.stacked-chart__bars rect {
+  rx: 12;
 }
 
-.radar-chart__center {
+.stacked-chart__bar {
+  transition: opacity 150ms ease;
+}
+
+.stacked-chart__bar:hover {
+  opacity: 0.85;
+}
+
+.stacked-chart__bar--primary {
+  fill: rgba(121, 109, 255, 0.85);
+}
+
+.stacked-chart__bar--secondary {
+  fill: rgba(255, 122, 150, 0.82);
+}
+
+.stacked-chart__tick-label {
+  fill: var(--text-muted);
+  font-size: 0.78rem;
+  text-anchor: middle;
+  font-weight: 600;
+}
+
+.stacked-chart__summary {
   position: absolute;
+  top: 2.5rem;
+  right: 2.5rem;
   text-align: center;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(244, 246, 255, 0.9));
-  padding: 1.8rem 2.4rem;
-  border-radius: 30px;
-  box-shadow: 0 20px 45px rgba(108, 118, 255, 0.18);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(244, 246, 255, 0.9));
+  padding: 1.5rem 2.1rem;
+  border-radius: 28px;
+  box-shadow: 0 18px 40px rgba(108, 118, 255, 0.18);
 }
 
-.radar-chart__center p {
+.stacked-chart__summary p {
   margin: 0;
   color: var(--text-muted);
   font-weight: 500;
 }
 
-.radar-chart__center .center-value {
+.stacked-chart__total {
   margin-top: 0.5rem;
   font-size: 1.8rem;
   font-weight: 700;
@@ -2637,7 +2660,7 @@ body {
     grid-area: overview;
   }
 
-  .radar-panel {
+  .performance-panel {
     grid-area: radar;
   }
 
