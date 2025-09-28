@@ -815,7 +815,8 @@ const SeoOpportunity = ({ rows }) => {
                         className="seo-stacked-chart__tick-label seo-stacked-chart__tick-label--x"
                         x={x}
                         y={stackedChartBottom + 40}
-                        textAnchor="middle"
+                        textAnchor="end"
+                        transform={`rotate(-45 ${x} ${stackedChartBottom + 40})`}
                       >
                         {item.label}
                       </text>
