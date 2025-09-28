@@ -462,8 +462,46 @@ body {
   box-shadow: inset 0 0 0 1px rgba(125, 107, 255, 0.25);
 }
 
-.seo-opportunity__legend-swatch--intense {
-  background: linear-gradient(135deg, rgba(125, 107, 255, 0.75), rgba(243, 180, 255, 1));
+.seo-opportunity__legend-swatch--ws {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.35), rgba(79, 70, 229, 0.75));
+  box-shadow: inset 0 0 0 1px rgba(79, 70, 229, 0.32);
+}
+
+.seo-opportunity__legend-swatch--volume {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.32), rgba(14, 116, 144, 0.72));
+  box-shadow: inset 0 0 0 1px rgba(14, 116, 144, 0.28);
+}
+
+.seo-opportunity__legend-item--stages {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.seo-opportunity__legend-item-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.seo-opportunity__legend-stage-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.seo-opportunity__legend-stage {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--text-soft);
+}
+
+.seo-opportunity__legend-stage-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.12);
 }
 
 .seo-metrics {
