@@ -11,6 +11,15 @@ const chartHeight = 480;
 const minRadius = 42;
 const maxRadius = 110;
 
+const stackedChartWidth = chartWidth;
+const stackedChartHeight = 360;
+const stackedChartPadding = {
+  top: 36,
+  right: 48,
+  bottom: 96,
+  left: 96,
+};
+
 const formatNumber = (value) => value.toLocaleString('en-US');
 
 const FUNNEL_STAGE_COLORS = {
@@ -383,6 +392,13 @@ const SeoOpportunity = ({ rows }) => {
   const chartLeft = xPadding;
   const chartRight = xPadding + xRange;
 
+  const stackedChartLeft = stackedChartPadding.left;
+  const stackedChartRight = stackedChartWidth - stackedChartPadding.right;
+  const stackedChartTop = stackedChartPadding.top;
+  const stackedChartBottom = stackedChartHeight - stackedChartPadding.bottom;
+  const stackedChartInnerWidth = stackedChartRight - stackedChartLeft;
+  const stackedChartInnerHeight = stackedChartBottom - stackedChartTop;
+
   const radiusScale = useMemo(() => {
     const safeMax = maxWs || 1;
     return (ws) => {
@@ -467,6 +483,76 @@ const SeoOpportunity = ({ rows }) => {
   const yAxisLabelX = chartLeft - 56;
   const yAxisLabelY = chartTop + yRange / 2;
 
+  const stackedData = useMemo(() => {
+    if (!keywords.length) {
+      return [];
+    }
+
+    return keywords.map((keyword) => ({
+      id: keyword.id,
+      label: keyword.shortLabel,
+      topic: keyword.topic,
+      stage: keyword.funnelStage,
+      total: keyword.volume,
+      segments: FUNNEL_STAGE_ORDER.map((stage) => ({
+        stage,
+        value: stage === keyword.funnelStage ? keyword.volume : 0,
+        color: FUNNEL_STAGE_COLORS[stage] || FUNNEL_STAGE_COLORS.default,
+      })),
+    }));
+  }, [keywords]);
+
+  const stackedCount = stackedData.length;
+
+  const stackedMaxVolume = useMemo(() => {
+    if (!stackedCount) {
+      return 0;
+    }
+    return Math.max(...stackedData.map((item) => item.total));
+  }, [stackedCount, stackedData]);
+
+  const stackedTicks = useMemo(() => {
+    const steps = 4;
+    const safeMax = stackedMaxVolume || 0;
+    if (!safeMax) {
+      return [
+        {
+          value: 0,
+          position: stackedChartBottom,
+        },
+      ];
+    }
+
+    return Array.from({ length: steps + 1 }, (_, index) => {
+      const value = (safeMax / steps) * index;
+      const ratio = safeMax ? value / safeMax : 0;
+      return {
+        value: Math.round(value),
+        position: stackedChartBottom - ratio * stackedChartInnerHeight,
+      };
+    });
+  }, [stackedChartBottom, stackedChartInnerHeight, stackedMaxVolume]);
+
+  const stackedBarLayout = useMemo(() => {
+    if (!stackedCount) {
+      return {
+        step: 0,
+        width: 0,
+        offset: 0,
+      };
+    }
+
+    const step = stackedChartInnerWidth / stackedCount;
+    const width = Math.min(52, Math.max(18, step * 0.6));
+    const offset = (step - width) / 2;
+
+    return {
+      step,
+      width,
+      offset,
+    };
+  }, [stackedChartInnerWidth, stackedCount]);
+
   return (
     <section className="card seo-opportunity-card" aria-labelledby="seo-opportunity-title">
       <header className="card__header">
@@ -491,144 +577,285 @@ const SeoOpportunity = ({ rows }) => {
       </header>
 
       <div className="seo-opportunity__content">
-        <figure
-          className="seo-bubble-chart"
-          role="group"
-          aria-labelledby="seo-opportunity-title"
-          aria-describedby="seo-bubble-caption"
-        >
-          <svg
-            className="seo-bubble-chart__svg"
-            viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-            preserveAspectRatio="xMidYMid meet"
-            role="presentation"
-            aria-hidden="true"
+        <div className="seo-opportunity__visualizations">
+          <figure
+            className="seo-bubble-chart"
+            role="group"
+            aria-labelledby="seo-opportunity-title"
+            aria-describedby="seo-bubble-caption"
           >
-            <defs>
-              {keywords.map((keyword) => (
-                <radialGradient
-                  key={keyword.id}
-                  id={`bubble-gradient-${keyword.id}`}
-                  cx="50%"
-                  cy="45%"
-                  r="70%"
-                >
-                  <stop offset="0%" stopColor="rgba(255, 255, 255, 0.9)" />
-                  <stop offset="65%" stopColor={`${keyword.color}cc`} />
-                  <stop offset="100%" stopColor={`${keyword.color}ff`} />
-                </radialGradient>
-              ))}
-            </defs>
+            <svg
+              className="seo-bubble-chart__svg"
+              viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+              preserveAspectRatio="xMidYMid meet"
+              role="presentation"
+              aria-hidden="true"
+            >
+              <defs>
+                {keywords.map((keyword) => (
+                  <radialGradient
+                    key={keyword.id}
+                    id={`bubble-gradient-${keyword.id}`}
+                    cx="50%"
+                    cy="45%"
+                    r="70%"
+                  >
+                    <stop offset="0%" stopColor="rgba(255, 255, 255, 0.9)" />
+                    <stop offset="65%" stopColor={`${keyword.color}cc`} />
+                    <stop offset="100%" stopColor={`${keyword.color}ff`} />
+                  </radialGradient>
+                ))}
+              </defs>
 
-            <g className="seo-bubble-chart__grid" aria-hidden="true">
-              {xTicks.map((tick, index) =>
-                index === 0 ? null : (
-                  <line
-                    key={`grid-x-${tick.value}-${index}`}
-                    className="seo-bubble-chart__grid-line"
-                    x1={tick.position}
-                    y1={chartTop}
-                    x2={tick.position}
-                    y2={chartBottom}
-                  />
-                )
-              )}
-              {yTicks.map((tick, index) =>
-                index === yTicks.length - 1 ? null : (
-                  <line
-                    key={`grid-y-${tick.value}-${index}`}
-                    className="seo-bubble-chart__grid-line"
-                    x1={chartLeft}
-                    y1={tick.position}
-                    x2={chartRight}
-                    y2={tick.position}
-                  />
-                )
-              )}
-            </g>
+              <g className="seo-bubble-chart__grid" aria-hidden="true">
+                {xTicks.map((tick, index) =>
+                  index === 0 ? null : (
+                    <line
+                      key={`grid-x-${tick.value}-${index}`}
+                      className="seo-bubble-chart__grid-line"
+                      x1={tick.position}
+                      y1={chartTop}
+                      x2={tick.position}
+                      y2={chartBottom}
+                    />
+                  )
+                )}
+                {yTicks.map((tick, index) =>
+                  index === yTicks.length - 1 ? null : (
+                    <line
+                      key={`grid-y-${tick.value}-${index}`}
+                      className="seo-bubble-chart__grid-line"
+                      x1={chartLeft}
+                      y1={tick.position}
+                      x2={chartRight}
+                      y2={tick.position}
+                    />
+                  )
+                )}
+              </g>
 
-            <g className="seo-bubble-chart__axes" aria-hidden="true">
-              <line
-                className="seo-bubble-chart__axis"
-                x1={chartLeft}
-                y1={chartBottom}
-                x2={chartRight}
-                y2={chartBottom}
-              />
-              <line
-                className="seo-bubble-chart__axis"
-                x1={chartLeft}
-                y1={chartTop}
-                x2={chartLeft}
-                y2={chartBottom}
-              />
+              <g className="seo-bubble-chart__axes" aria-hidden="true">
+                <line
+                  className="seo-bubble-chart__axis"
+                  x1={chartLeft}
+                  y1={chartBottom}
+                  x2={chartRight}
+                  y2={chartBottom}
+                />
+                <line
+                  className="seo-bubble-chart__axis"
+                  x1={chartLeft}
+                  y1={chartTop}
+                  x2={chartLeft}
+                  y2={chartBottom}
+                />
 
-              {xTicks.map((tick) => (
+                {xTicks.map((tick) => (
+                  <text
+                    key={`tick-x-${tick.value}-${tick.position}`}
+                    className="seo-bubble-chart__tick-label"
+                    x={tick.position}
+                    y={chartBottom + 24}
+                    textAnchor="middle"
+                  >
+                    {formatNumber(Math.round(tick.value))}
+                  </text>
+                ))}
+
+                {yTicks.map((tick) => (
+                  <text
+                    key={`tick-y-${tick.value}-${tick.position}`}
+                    className="seo-bubble-chart__tick-label"
+                    x={chartLeft - 12}
+                    y={tick.position + 4}
+                    textAnchor="end"
+                  >
+                    {Math.round(tick.value)}
+                  </text>
+                ))}
+
                 <text
-                  key={`tick-x-${tick.value}-${tick.position}`}
-                  className="seo-bubble-chart__tick-label"
-                  x={tick.position}
-                  y={chartBottom + 24}
+                  className="seo-bubble-chart__axis-label"
+                  x={chartLeft + xRange / 2}
+                  y={xAxisLabelY}
                   textAnchor="middle"
                 >
-                  {formatNumber(Math.round(tick.value))}
+                  Monthly search volume
                 </text>
-              ))}
-
-              {yTicks.map((tick) => (
                 <text
-                  key={`tick-y-${tick.value}-${tick.position}`}
-                  className="seo-bubble-chart__tick-label"
-                  x={chartLeft - 12}
-                  y={tick.position + 4}
-                  textAnchor="end"
+                  className="seo-bubble-chart__axis-label"
+                  x={yAxisLabelX}
+                  y={yAxisLabelY}
+                  textAnchor="middle"
+                  transform={`rotate(-90 ${yAxisLabelX} ${yAxisLabelY})`}
                 >
-                  {Math.round(tick.value)}
+                  Winning score (WS)
                 </text>
-              ))}
+              </g>
 
-              <text className="seo-bubble-chart__axis-label" x={chartLeft + xRange / 2} y={xAxisLabelY} textAnchor="middle">
-                Monthly search volume
-              </text>
-              <text
-                className="seo-bubble-chart__axis-label"
-                x={yAxisLabelX}
-                y={yAxisLabelY}
-                textAnchor="middle"
-                transform={`rotate(-90 ${yAxisLabelX} ${yAxisLabelY})`}
+              {keywords.map((keyword) => {
+                const radius = radiusScale(keyword.ws);
+                return (
+                  <g key={keyword.id} transform={`translate(${keyword.x}, ${keyword.y})`} className="seo-bubble">
+                    <title>{keyword.topic || keyword.shortLabel || 'Keyword'}</title>
+                    <circle
+                      className="seo-bubble__circle"
+                      r={radius}
+                      fill={`url(#bubble-gradient-${keyword.id})`}
+                      stroke={`${keyword.color}66`}
+                      strokeWidth="2"
+                    />
+                    {renderBubbleLabel(keyword, radius)}
+                  </g>
+                );
+              })}
+            </svg>
+            <figcaption id="seo-bubble-caption" className="seo-bubble-chart__caption">
+              {captionKeyword ? (
+                <>
+                  Highlighted keyword &ldquo;{captionKeyword.shortLabel}&rdquo; offers the highest opportunity score at{' '}
+                  {captionKeyword.opportunity} with {formatNumber(captionKeyword.volume)} monthly searches.
+                </>
+              ) : (
+                'No keyword data available.'
+              )}
+            </figcaption>
+          </figure>
+
+          <figure
+            className="seo-stacked-chart"
+            role="group"
+            aria-labelledby="seo-stacked-title"
+            aria-describedby="seo-stacked-caption"
+          >
+            <div className="seo-stacked-chart__header">
+              <h3 id="seo-stacked-title">Funnel stage distribution</h3>
+              <p>Compare how each procedure contributes to search demand at every stage of the journey.</p>
+            </div>
+            {stackedData.length ? (
+              <svg
+                className="seo-stacked-chart__svg"
+                viewBox={`0 0 ${stackedChartWidth} ${stackedChartHeight}`}
+                preserveAspectRatio="xMidYMid meet"
+                role="presentation"
+                aria-hidden="true"
               >
-                Winning score (WS)
-              </text>
-            </g>
-
-            {keywords.map((keyword) => {
-              const radius = radiusScale(keyword.ws);
-              return (
-                <g key={keyword.id} transform={`translate(${keyword.x}, ${keyword.y})`} className="seo-bubble">
-                  <title>{keyword.topic || keyword.shortLabel || 'Keyword'}</title>
-                  <circle
-                    className="seo-bubble__circle"
-                    r={radius}
-                    fill={`url(#bubble-gradient-${keyword.id})`}
-                    stroke={`${keyword.color}66`}
-                    strokeWidth="2"
+                <g className="seo-stacked-chart__axes" aria-hidden="true">
+                  <line
+                    className="seo-stacked-chart__axis"
+                    x1={stackedChartLeft}
+                    y1={stackedChartBottom}
+                    x2={stackedChartRight}
+                    y2={stackedChartBottom}
                   />
-                  {renderBubbleLabel(keyword, radius)}
+                  <line
+                    className="seo-stacked-chart__axis"
+                    x1={stackedChartLeft}
+                    y1={stackedChartTop}
+                    x2={stackedChartLeft}
+                    y2={stackedChartBottom}
+                  />
+
+                  {stackedTicks.map((tick) => (
+                    <g key={`stacked-y-${tick.value}`} transform={`translate(0, ${tick.position})`}>
+                      <line
+                        className="seo-stacked-chart__grid-line"
+                        x1={stackedChartLeft}
+                        x2={stackedChartRight}
+                      />
+                      <text
+                        className="seo-stacked-chart__tick-label"
+                        x={stackedChartLeft - 14}
+                        y={4}
+                        textAnchor="end"
+                      >
+                        {formatNumber(Math.round(tick.value))}
+                      </text>
+                    </g>
+                  ))}
+
+                  {stackedData.map((item, index) => {
+                    const x =
+                      stackedChartLeft + index * stackedBarLayout.step + stackedBarLayout.offset + stackedBarLayout.width / 2;
+                    return (
+                      <text
+                        key={`stacked-x-${item.id}`}
+                        className="seo-stacked-chart__tick-label seo-stacked-chart__tick-label--x"
+                        x={x}
+                        y={stackedChartBottom + 40}
+                        textAnchor="middle"
+                      >
+                        {item.label}
+                      </text>
+                    );
+                  })}
+
+                  <text
+                    className="seo-stacked-chart__axis-label"
+                    x={stackedChartLeft + stackedChartInnerWidth / 2}
+                    y={stackedChartHeight - 32}
+                    textAnchor="middle"
+                  >
+                    Procedures
+                  </text>
+                  <text
+                    className="seo-stacked-chart__axis-label"
+                    x={stackedChartLeft - 56}
+                    y={stackedChartTop + stackedChartInnerHeight / 2}
+                    textAnchor="middle"
+                    transform={`rotate(-90 ${stackedChartLeft - 56} ${stackedChartTop + stackedChartInnerHeight / 2})`}
+                  >
+                    Monthly search volume
+                  </text>
                 </g>
-              );
-            })}
-          </svg>
-          <figcaption id="seo-bubble-caption" className="seo-bubble-chart__caption">
-            {captionKeyword ? (
-              <>
-                Highlighted keyword &ldquo;{captionKeyword.shortLabel}&rdquo; offers the highest opportunity score at{' '}
-                {captionKeyword.opportunity} with {formatNumber(captionKeyword.volume)} monthly searches.
-              </>
+
+                <g className="seo-stacked-chart__bars">
+                  {stackedData.map((item, index) => {
+                    const x = stackedChartLeft + index * stackedBarLayout.step + stackedBarLayout.offset;
+                    let currentY = stackedChartBottom;
+                    return (
+                      <g key={item.id} transform={`translate(${x}, 0)`}>
+                        <title>
+                          {`${item.topic} – ${item.stage} stage with ${formatNumber(item.total)} monthly searches`}
+                        </title>
+                        {item.segments.map((segment) => {
+                          if (!segment.value) {
+                            return null;
+                          }
+
+                          const height = stackedMaxVolume
+                            ? (segment.value / stackedMaxVolume) * stackedChartInnerHeight
+                            : 0;
+                          const y = currentY - height;
+                          currentY = y;
+
+                          return (
+                            <rect
+                              key={segment.stage}
+                              className="seo-stacked-chart__bar"
+                              x={0}
+                              y={y}
+                              width={stackedBarLayout.width}
+                              height={height}
+                              fill={segment.color}
+                              rx={6}
+                            />
+                          );
+                        })}
+                      </g>
+                    );
+                  })}
+                </g>
+              </svg>
             ) : (
-              'No keyword data available.'
+              <p className="seo-stacked-chart__empty">No keyword breakdown available.</p>
             )}
-          </figcaption>
-        </figure>
+            <figcaption id="seo-stacked-caption" className="seo-stacked-chart__caption">
+              Each stacked column shows the monthly search volume for a procedure, coloured by the funnel stage assigned to
+              that opportunity.
+            </figcaption>
+          </figure>
+        </div>
 
         <aside className="seo-opportunity__sidebar" aria-label="Keyword insights">
           <div className="seo-opportunity__legend">
