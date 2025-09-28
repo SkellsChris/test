@@ -49,9 +49,49 @@ const mergeProjects = (incoming, existing) => {
   return merged;
 };
 
-const createInitialSheetsState = () => ({
-  'atlas-redesign': KEYWORD_SHEET_ROWS.map((row) => ({ ...row })),
-});
+const STORAGE_KEY = 'atlas-dashboard.project-sheets';
+
+const cloneRows = (rows) => (Array.isArray(rows) ? rows.map((row) => ({ ...row })) : []);
+
+const loadStoredSheets = () => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') {
+      return null;
+    }
+
+    return Object.entries(parsed).reduce((accumulator, [projectId, rows]) => {
+      accumulator[projectId] = cloneRows(rows);
+      return accumulator;
+    }, {});
+  } catch (error) {
+    console.error('Failed to read stored project sheets', error);
+    return null;
+  }
+};
+
+const createInitialSheetsState = () => {
+  const stored = loadStoredSheets();
+  if (stored) {
+    if (!stored['atlas-redesign'] || stored['atlas-redesign'].length === 0) {
+      stored['atlas-redesign'] = KEYWORD_SHEET_ROWS.map((row) => ({ ...row }));
+    }
+    return stored;
+  }
+
+  return {
+    'atlas-redesign': KEYWORD_SHEET_ROWS.map((row) => ({ ...row })),
+  };
+};
 
 const App = () => {
   const { user } = useAuth();
@@ -153,6 +193,23 @@ const App = () => {
       setActiveProject(projects[0].id);
     }
   }, [projects, activeProject]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      const serialisable = Object.entries(projectSheets).reduce((accumulator, [projectId, rows]) => {
+        accumulator[projectId] = cloneRows(rows);
+        return accumulator;
+      }, {});
+
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(serialisable));
+    } catch (error) {
+      console.error('Failed to persist project sheets', error);
+    }
+  }, [projectSheets]);
 
   useEffect(() => {
     setProjectSheets((previous) => {
