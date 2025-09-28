@@ -344,7 +344,7 @@ body {
 .funnel-card {
   padding: 2.4rem 2.7rem;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   width: 100%;
 }
 
@@ -555,6 +555,7 @@ body {
   filter: blur(90px);
   opacity: 0.45;
   pointer-events: none;
+  clip-path: inset(0 round var(--radius));
 }
 
 .funnel-card::before {
