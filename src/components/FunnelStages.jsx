@@ -89,6 +89,46 @@ const safeVolume = (value) => {
 
 const assignClusterStyle = (index) => CLUSTER_PALETTE[index % CLUSTER_PALETTE.length];
 
+const determineDominantStage = (clusterRow) => {
+  if (!clusterRow) {
+    return null;
+  }
+
+  const stageCounts = clusterRow.stageCounts instanceof Map ? clusterRow.stageCounts : null;
+
+  if (stageCounts) {
+    const countEntries = FUNNEL_STAGE_ORDER.map((stage) => ({
+      stage,
+      value: stageCounts.get(stage) || 0,
+    })).sort((a, b) => b.value - a.value);
+
+    const [topCount] = countEntries;
+    if (topCount && topCount.value > 0) {
+      const tiedOnCount = countEntries.filter(({ value }) => value === topCount.value).length;
+      if (tiedOnCount === 1) {
+        return topCount.stage;
+      }
+    }
+  }
+
+  const volumeEntries = FUNNEL_STAGE_ORDER.map((stage) => ({
+    stage,
+    value: clusterRow[stage] || 0,
+  })).sort((a, b) => b.value - a.value);
+
+  const [topVolume] = volumeEntries;
+  if (!topVolume || topVolume.value <= 0) {
+    return null;
+  }
+
+  const tiedOnVolume = volumeEntries.filter(({ value }) => value === topVolume.value).length;
+  if (tiedOnVolume > 1) {
+    return null;
+  }
+
+  return topVolume.stage;
+};
+
 const buildFunnelDataset = (rows) => {
   const clusterEntries = new Map();
 
@@ -106,17 +146,23 @@ const buildFunnelDataset = (rows) => {
         cluster: primaryKeyword,
         totalVolume: 0,
         stageVolumes: new Map(FUNNEL_STAGE_ORDER.map((name) => [name, 0])),
+        stageCounts: new Map(FUNNEL_STAGE_ORDER.map((name) => [name, 0])),
       });
     }
 
     const entry = clusterEntries.get(primaryKeyword);
     entry.stageVolumes.set(stage, (entry.stageVolumes.get(stage) || 0) + volume);
+    entry.stageCounts.set(stage, (entry.stageCounts.get(stage) || 0) + 1);
     entry.totalVolume += volume;
   });
 
   const clusterStageTable = Array.from(clusterEntries.values())
     .map((entry) => {
-      const row = { cluster: entry.cluster, totalVolume: entry.totalVolume };
+      const row = {
+        cluster: entry.cluster,
+        totalVolume: entry.totalVolume,
+        stageCounts: entry.stageCounts,
+      };
       FUNNEL_STAGE_ORDER.forEach((stage) => {
         row[stage] = entry.stageVolumes.get(stage) || 0;
       });
@@ -125,13 +171,17 @@ const buildFunnelDataset = (rows) => {
     .sort((a, b) => b.totalVolume - a.totalVolume);
 
   const clusterDefinitions = clusterStageTable.map((clusterRow, index) => {
-    const style = assignClusterStyle(index);
+    const dominantStage = determineDominantStage(clusterRow);
+    const stageStyle = dominantStage ? FUNNEL_STAGE_STYLES[dominantStage] : null;
+    const fallbackStyle = assignClusterStyle(index);
+
     return {
       id: clusterRow.cluster,
       label: clusterRow.cluster,
       side: 'left',
-      gradient: style.gradient,
-      shadow: style.shadow,
+      gradient: (stageStyle || fallbackStyle).gradient,
+      shadow: (stageStyle || fallbackStyle).shadow,
+      dominantStage: dominantStage || null,
     };
   });
 
@@ -145,6 +195,7 @@ const buildFunnelDataset = (rows) => {
       side: 'right',
       gradient: style.gradient,
       shadow: style.shadow,
+      dominantStage: stage,
     };
   });
 
@@ -359,20 +410,30 @@ const FunnelStages = ({ rows }) => {
         <div className="funnel-stage-summary" aria-label="Funnel stage totals">
           <div className="funnel-stage-group" role="list">
             <span className="funnel-stage-group__title">Sources</span>
-            {leftNodes.map((node) => (
-              <div
-                key={node.id}
-                role="listitem"
-                className="funnel-stage-card"
-                style={{
-                  '--stage-card-shadow': node.shadow,
-                  background: node.gradient,
-                }}
-              >
-                <span className="funnel-stage-card__label">{node.label}</span>
-                <span className="funnel-stage-card__value">{formatVolume(node.value)}</span>
-              </div>
-            ))}
+            {leftNodes.map((node) => {
+              const stageClass = node.dominantStage
+                ? ` funnel-stage-card--${node.dominantStage.toLowerCase()}`
+                : '';
+
+              return (
+                <div
+                  key={node.id}
+                  role="listitem"
+                  className={`funnel-stage-card${stageClass}`}
+                  style={{
+                    '--stage-card-shadow': node.shadow,
+                    background: node.gradient,
+                  }}
+                  data-stage={node.dominantStage || undefined}
+                >
+                  <span className="funnel-stage-card__label">{node.label}</span>
+                  {node.dominantStage ? (
+                    <span className="funnel-stage-card__stage">{node.dominantStage}</span>
+                  ) : null}
+                  <span className="funnel-stage-card__value">{formatVolume(node.value)}</span>
+                </div>
+              );
+            })}
           </div>
 
           <div className="funnel-stage-group" role="list">

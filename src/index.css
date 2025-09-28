@@ -772,6 +772,19 @@ body {
   letter-spacing: 0.05em;
 }
 
+.funnel-stage-card__stage {
+  align-self: flex-start;
+  margin-top: 0.1rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .funnel-stage-card__value {
   font-size: 1.35rem;
   font-weight: 700;
