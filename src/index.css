@@ -206,6 +206,16 @@ body {
   outline: none;
 }
 
+.project-switcher__button--danger {
+  background: linear-gradient(135deg, #f87171, #ef4444);
+  box-shadow: 0 12px 25px rgba(239, 68, 68, 0.35);
+}
+
+.project-switcher__button--danger:hover,
+.project-switcher__button--danger:focus-visible {
+  box-shadow: 0 16px 32px rgba(239, 68, 68, 0.45);
+}
+
 .project-switcher__button:disabled {
   opacity: 0.6;
   cursor: not-allowed;

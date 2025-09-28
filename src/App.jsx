@@ -11,7 +11,7 @@ import LogoutButton from './components/LogoutButton.jsx';
 import { KEYWORD_SHEET_ROWS } from './data/keywordSheet.js';
 import { DASHBOARD_DATA, TIMEFRAME_OPTIONS } from './data/dashboardData.js';
 import NewProjectModal from './components/NewProjectModal.jsx';
-import { createProject, fetchProjects } from './services/projects.js';
+import { createProject, deleteProject, fetchProjects } from './services/projects.js';
 import { isSupabaseConfigured } from './services/supabaseClient.js';
 import { useAuth } from './auth/AuthProvider.jsx';
 
@@ -104,6 +104,7 @@ const App = () => {
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
   const [isProjectLoading, setIsProjectLoading] = useState(false);
   const [toast, setToast] = useState(null);
+  const [isProjectDeleting, setIsProjectDeleting] = useState(false);
 
   const activeData = DASHBOARD_DATA[activeTimeframe];
 
@@ -282,6 +283,59 @@ const App = () => {
     }
   };
 
+  const handleProjectDelete = async () => {
+    if (!activeProject || isProjectDeleting) {
+      return;
+    }
+
+    if (!user) {
+      setToast({ type: 'error', message: 'Veuillez vous connecter pour supprimer un projet.' });
+      return;
+    }
+
+    const projectToDelete = projects.find((project) => project.id === activeProject);
+    if (!projectToDelete) {
+      return;
+    }
+
+    if (typeof window !== 'undefined') {
+      const confirmed = window.confirm(
+        `Voulez-vous vraiment supprimer le projet « ${projectToDelete.label} » ? Cette action est irréversible.`
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    setIsProjectDeleting(true);
+
+    const previousProjects = projects;
+    const previousProjectSheets = projectSheets;
+    const previousActiveProject = activeProject;
+
+    const nextProjects = projects.filter((project) => project.id !== projectToDelete.id);
+
+    setProjects(nextProjects);
+    setActiveProject((current) => (current === projectToDelete.id ? nextProjects[0]?.id || '' : current));
+    setProjectSheets((previous) => {
+      const next = { ...previous };
+      delete next[projectToDelete.id];
+      return next;
+    });
+
+    try {
+      await deleteProject(projectToDelete.id);
+      setToast({ type: 'success', message: 'Projet supprimé avec succès.' });
+    } catch (error) {
+      setProjects(previousProjects);
+      setActiveProject(previousActiveProject);
+      setProjectSheets(previousProjectSheets);
+      setToast({ type: 'error', message: error?.message || 'Impossible de supprimer le projet.' });
+    } finally {
+      setIsProjectDeleting(false);
+    }
+  };
+
   const pages = [
     { id: 'overview', label: 'Overview' },
     { id: 'funnel', label: 'Funnel Stages' },
@@ -389,6 +443,19 @@ const App = () => {
                   disabled={isProjectLoading || !user}
                 >
                   Nouveau projet
+                </button>
+                <button
+                  type="button"
+                  className="project-switcher__button project-switcher__button--danger"
+                  onClick={handleProjectDelete}
+                  disabled={
+                    isProjectLoading ||
+                    isProjectDeleting ||
+                    projects.length === 0 ||
+                    !activeProject
+                  }
+                >
+                  Supprimer le projet
                 </button>
                 {!user ? <span className="project-switcher__hint">Veuillez vous connecter</span> : null}
               </div>
