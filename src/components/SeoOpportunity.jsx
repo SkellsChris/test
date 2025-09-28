@@ -136,15 +136,15 @@ const layoutKeywords = (keywords) => {
   const volumeRange = Math.max(maxVolume - minVolume, 1);
 
   const positioned = keywords.map((keyword) => {
-    const wsRatio = maxWs ? keyword.ws / maxWs : 0;
     const volumeRatio = (keyword.volume - minVolume) / volumeRange;
+    const wsRatio = maxWs ? keyword.ws / maxWs : 0;
     const color = FUNNEL_STAGE_COLORS[keyword.funnelStage] || FUNNEL_STAGE_COLORS.default;
 
     return {
       ...keyword,
       color,
-      x: Math.round(xPadding + wsRatio * xRange),
-      y: Math.round(chartHeight - yPadding - volumeRatio * yRange),
+      x: Math.round(xPadding + volumeRatio * xRange),
+      y: Math.round(chartHeight - yPadding - wsRatio * yRange),
     };
   });
 
@@ -393,28 +393,6 @@ const SeoOpportunity = ({ rows }) => {
 
   const xTicks = useMemo(() => {
     const steps = 4;
-    const safeMax = maxWs || 0;
-    if (!safeMax) {
-      return [
-        {
-          value: 0,
-          position: chartLeft,
-        },
-      ];
-    }
-
-    return Array.from({ length: steps + 1 }, (_, index) => {
-      const value = (safeMax / steps) * index;
-      const ratio = safeMax ? value / safeMax : 0;
-      return {
-        value: Math.round(value),
-        position: chartLeft + ratio * xRange,
-      };
-    });
-  }, [chartLeft, maxWs, xRange]);
-
-  const yTicks = useMemo(() => {
-    const steps = 4;
     const safeMin = Number.isFinite(minVolume) ? minVolume : 0;
     const safeMax = Number.isFinite(maxVolume) ? maxVolume : safeMin;
     const range = safeMax - safeMin;
@@ -423,7 +401,7 @@ const SeoOpportunity = ({ rows }) => {
       return [
         {
           value: Math.round(safeMin),
-          position: chartBottom,
+          position: chartLeft,
         },
       ];
     }
@@ -433,10 +411,32 @@ const SeoOpportunity = ({ rows }) => {
       const ratio = range ? (value - safeMin) / range : 0;
       return {
         value: Math.round(value),
+        position: chartLeft + ratio * xRange,
+      };
+    });
+  }, [chartLeft, maxVolume, minVolume, xRange]);
+
+  const yTicks = useMemo(() => {
+    const steps = 4;
+    const safeMax = maxWs || 0;
+    if (!safeMax) {
+      return [
+        {
+          value: 0,
+          position: chartBottom,
+        },
+      ];
+    }
+
+    return Array.from({ length: steps + 1 }, (_, index) => {
+      const value = (safeMax / steps) * index;
+      const ratio = safeMax ? value / safeMax : 0;
+      return {
+        value: Math.round(value),
         position: chartBottom - ratio * yRange,
       };
     });
-  }, [chartBottom, maxVolume, minVolume, yRange]);
+  }, [chartBottom, maxWs, yRange]);
 
   const stageLegend = useMemo(
     () =>
@@ -474,7 +474,7 @@ const SeoOpportunity = ({ rows }) => {
           <p className="card__eyebrow">Keyword landscape</p>
           <h2 id="seo-opportunity-title">SEO opportunity map</h2>
           <p className="card__subtitle">
-            X-axis and bubble size show winning score (WS), Y-axis indicates monthly search volume, and colour
+            X-axis indicates monthly search volume, Y-axis and bubble size show winning score (WS), and colour
             represents the funnel stage.
           </p>
         </div>
@@ -571,7 +571,7 @@ const SeoOpportunity = ({ rows }) => {
                   y={chartBottom + 24}
                   textAnchor="middle"
                 >
-                  {Math.round(tick.value)}
+                  {formatNumber(Math.round(tick.value))}
                 </text>
               ))}
 
@@ -583,12 +583,12 @@ const SeoOpportunity = ({ rows }) => {
                   y={tick.position + 4}
                   textAnchor="end"
                 >
-                  {formatNumber(Math.round(tick.value))}
+                  {Math.round(tick.value)}
                 </text>
               ))}
 
               <text className="seo-bubble-chart__axis-label" x={chartLeft + xRange / 2} y={xAxisLabelY} textAnchor="middle">
-                Winning score (WS)
+                Monthly search volume
               </text>
               <text
                 className="seo-bubble-chart__axis-label"
@@ -597,7 +597,7 @@ const SeoOpportunity = ({ rows }) => {
                 textAnchor="middle"
                 transform={`rotate(-90 ${yAxisLabelX} ${yAxisLabelY})`}
               >
-                Monthly search volume
+                Winning score (WS)
               </text>
             </g>
 
@@ -634,12 +634,12 @@ const SeoOpportunity = ({ rows }) => {
           <div className="seo-opportunity__legend">
             <span className="seo-opportunity__legend-title">Legend</span>
             <div className="seo-opportunity__legend-item">
-              <span className="seo-opportunity__legend-swatch seo-opportunity__legend-swatch--ws" aria-hidden="true" />
-              <span>X-axis &amp; bubble size → Winning score (WS)</span>
+              <span className="seo-opportunity__legend-swatch seo-opportunity__legend-swatch--volume" aria-hidden="true" />
+              <span>X-axis → Monthly search volume</span>
             </div>
             <div className="seo-opportunity__legend-item">
-              <span className="seo-opportunity__legend-swatch seo-opportunity__legend-swatch--volume" aria-hidden="true" />
-              <span>Y-axis → Monthly search volume</span>
+              <span className="seo-opportunity__legend-swatch seo-opportunity__legend-swatch--ws" aria-hidden="true" />
+              <span>Y-axis &amp; bubble size → Winning score (WS)</span>
             </div>
             <div className="seo-opportunity__legend-item seo-opportunity__legend-item--stages">
               <span className="seo-opportunity__legend-item-label">Colour → Funnel stage</span>
