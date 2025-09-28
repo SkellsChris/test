@@ -192,7 +192,10 @@ const NewProjectModal = ({ open, onRequestClose, onSubmit }) => {
       >
         <header className="new-project-modal__header">
           <div>
-            <h2 id="new-project-modal-title">Nouveau projet</h2>
+            <h2 id="new-project-modal-title">
+              <span aria-hidden="true">+</span>
+              <span className="sr-only">Nouveau projet</span>
+            </h2>
             <p>Créez un nouveau projet pour votre tableau de bord.</p>
           </div>
           <button
