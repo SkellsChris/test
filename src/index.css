@@ -386,6 +386,12 @@ body {
   align-items: start;
 }
 
+.seo-opportunity__visualizations {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
 .seo-bubble-chart {
   margin: 0;
   padding: 1.5rem;
@@ -427,6 +433,93 @@ body {
 
 .seo-bubble-chart__caption {
   margin: 1.4rem 0 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.seo-stacked-chart {
+  margin: 0;
+  padding: 1.6rem;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 32px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.seo-stacked-chart__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.seo-stacked-chart__header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.seo-stacked-chart__header p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.seo-stacked-chart__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.seo-stacked-chart__axis {
+  stroke: rgba(15, 23, 42, 0.18);
+  stroke-width: 1.5;
+}
+
+.seo-stacked-chart__grid-line {
+  stroke: rgba(15, 23, 42, 0.08);
+  stroke-dasharray: 4 6;
+}
+
+.seo-stacked-chart__tick-label {
+  fill: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.seo-stacked-chart__tick-label--x {
+  font-size: 0.8rem;
+  font-weight: 600;
+  fill: var(--text-soft);
+}
+
+.seo-stacked-chart__axis-label {
+  fill: var(--text-soft);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.seo-stacked-chart__bars {
+  fill: none;
+}
+
+.seo-stacked-chart__bar {
+  stroke: rgba(255, 255, 255, 0.4);
+  stroke-width: 1;
+}
+
+.seo-stacked-chart__caption {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.seo-stacked-chart__empty {
+  margin: 0;
   font-size: 0.9rem;
   color: var(--text-muted);
 }
