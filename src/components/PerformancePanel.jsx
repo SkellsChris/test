@@ -1,8 +1,8 @@
 import PropTypes from 'prop-types';
-import RadarChart from './RadarChart.jsx';
+import StackedBarChart from './StackedBarChart.jsx';
 
 const PerformancePanel = ({ data }) => (
-  <section className="card radar-panel" aria-labelledby="performance-title">
+  <section className="card performance-panel" aria-labelledby="performance-title">
     <header className="card__header">
       <div>
         <p className="card__eyebrow">{data.eyebrow}</p>
@@ -16,7 +16,7 @@ const PerformancePanel = ({ data }) => (
       </div>
     </header>
 
-    <RadarChart
+    <StackedBarChart
       categories={data.categories}
       datasets={data.datasets}
       centerLabel={data.centerLabel}
