@@ -281,6 +281,19 @@ const FunnelStages = ({ rows }) => {
 
   const leftNodes = useMemo(() => sankeyNodes.filter((node) => node.side === 'left'), [sankeyNodes]);
   const rightNodes = useMemo(() => sankeyNodes.filter((node) => node.side === 'right'), [sankeyNodes]);
+  const sankeyHeight = useMemo(() => {
+    const baseHeight = 420;
+    const baselineNodeCount = 8;
+    const extraHeightPerNode = 42;
+
+    const maxNodeCount = Math.max(leftNodes.length, rightNodes.length);
+
+    if (maxNodeCount <= baselineNodeCount) {
+      return baseHeight;
+    }
+
+    return baseHeight + (maxNodeCount - baselineNodeCount) * extraHeightPerNode;
+  }, [leftNodes.length, rightNodes.length]);
   const stageKeywordHighlights = useMemo(
     () => buildStageKeywordHighlights(rows && rows.length > 0 ? rows : KEYWORD_SHEET_ROWS),
     [rows]
@@ -303,6 +316,7 @@ const FunnelStages = ({ rows }) => {
             valueFormatter={formatVolume}
             title="Répartition des volumes par stage"
             description="Flux des volumes de recherche entre les clusters de mots-clés et les étapes du funnel."
+            height={sankeyHeight}
           />
         </div>
 
