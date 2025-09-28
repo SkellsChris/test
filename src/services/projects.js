@@ -110,3 +110,23 @@ export const createProject = async ({ name, description, owner = null }) => {
     created_at: data.created_at ?? null,
   };
 };
+
+export const deleteProject = async (id) => {
+  if (!id) {
+    throw new Error("L'identifiant du projet est requis pour la suppression.");
+  }
+
+  if (!isSupabaseConfigured) {
+    // Aucun appel distant possible, on considère la suppression comme réussie côté local.
+    return { skipped: true };
+  }
+
+  const supabase = await getSupabaseClient();
+  const { error } = await supabase.from('projects').delete().eq('id', id);
+
+  if (error) {
+    throw new Error(error.message || 'Impossible de supprimer le projet.');
+  }
+
+  return { success: true };
+};
