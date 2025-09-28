@@ -605,6 +605,7 @@ const SeoOpportunity = ({ rows }) => {
               const radius = radiusScale(keyword.ws);
               return (
                 <g key={keyword.id} transform={`translate(${keyword.x}, ${keyword.y})`} className="seo-bubble">
+                  <title>{keyword.topic || keyword.shortLabel || 'Keyword'}</title>
                   <circle
                     className="seo-bubble__circle"
                     r={radius}
