@@ -142,7 +142,68 @@ const layoutKeywords = (keywords) => {
   };
 };
 
-const buildDatasetFromKeywords = (keywords) => {
+const computeCategoryBreakdown = (keywords) => {
+  if (!Array.isArray(keywords) || keywords.length === 0) {
+    return [];
+  }
+
+  const categoryMap = new Map();
+
+  keywords.forEach((keyword) => {
+    if (!keyword) {
+      return;
+    }
+
+    const volume = Number(keyword.volume ?? 0);
+    if (!Number.isFinite(volume) || volume <= 0) {
+      return;
+    }
+
+    const categoryLabel = String(
+      keyword.topic || keyword.cluster || keyword.primaryKeyword || keyword.shortLabel || 'Uncategorised'
+    );
+    const stage = keyword.funnelStage || 'Unassigned';
+
+    if (!categoryMap.has(categoryLabel)) {
+      categoryMap.set(categoryLabel, {
+        id: `category-${categoryLabel.toLowerCase().replace(/[^a-z0-9]+/gi, '-')}`,
+        label: categoryLabel,
+        total: 0,
+        segments: new Map(),
+      });
+    }
+
+    const entry = categoryMap.get(categoryLabel);
+    entry.total += volume;
+    const currentValue = entry.segments.get(stage) || 0;
+    entry.segments.set(stage, currentValue + volume);
+  });
+
+  const orderedCategories = Array.from(categoryMap.keys()).sort((a, b) =>
+    a.localeCompare(b, 'fr', { sensitivity: 'base' })
+  );
+
+  return orderedCategories.map((category) => {
+    const entry = categoryMap.get(category);
+    const orderedStages = [
+      ...FUNNEL_STAGE_ORDER.filter((stage) => entry.segments.has(stage)),
+      ...Array.from(entry.segments.keys()).filter((stage) => !FUNNEL_STAGE_ORDER.includes(stage)),
+    ];
+
+    return {
+      id: entry.id,
+      label: entry.label,
+      total: entry.total,
+      segments: orderedStages.map((stage) => ({
+        stage,
+        value: entry.segments.get(stage) || 0,
+        color: FUNNEL_STAGE_COLORS[stage] || FUNNEL_STAGE_COLORS.default,
+      })),
+    };
+  });
+};
+
+const buildDatasetFromKeywords = (keywords, stackedKeywords = keywords) => {
   const {
     keywords: positionedKeywords,
     maxVolume,
@@ -169,6 +230,7 @@ const buildDatasetFromKeywords = (keywords) => {
         xRange,
         yRange,
       },
+      categoryBreakdown: computeCategoryBreakdown(stackedKeywords),
     };
   }
 
@@ -200,6 +262,7 @@ const buildDatasetFromKeywords = (keywords) => {
       xRange,
       yRange,
     },
+    categoryBreakdown: computeCategoryBreakdown(stackedKeywords),
   };
 };
 
@@ -255,6 +318,7 @@ const buildSeoOpportunityDataset = (rows) => {
         id: row.id,
         primaryKeyword: row.primaryKeyword,
         cluster: row.cluster || '',
+        topic: row.cluster || row.primaryKeyword || '',
         volume,
         difficulty: clampNumber(Number(row.difficulty ?? 0), 0, 100),
         fw: clampNumber(Number(row.fwValue ?? row.fw ?? 1), 0.5, 3),
@@ -283,7 +347,7 @@ const buildSeoOpportunityDataset = (rows) => {
 
     return {
       id: row.id || `seo-${index}`,
-      topic: row.cluster || row.primaryKeyword,
+      topic: row.topic || row.cluster || row.primaryKeyword,
       shortLabel,
       volume: row.volume,
       difficulty: row.difficulty,
@@ -298,7 +362,7 @@ const buildSeoOpportunityDataset = (rows) => {
     };
   });
 
-  return buildDatasetFromKeywords(keywords);
+  return buildDatasetFromKeywords(keywords, normalised);
 };
 
 const SeoOpportunity = ({ rows }) => {
@@ -311,6 +375,7 @@ const SeoOpportunity = ({ rows }) => {
     averageOpportunity,
     totalProjectedTraffic,
     highestOpportunityKeyword,
+    categoryBreakdown,
   } = useMemo(() => buildSeoOpportunityDataset(rows), [rows]);
 
   const { xPadding, yPadding, xRange, yRange } = plotArea;
@@ -401,56 +466,7 @@ const SeoOpportunity = ({ rows }) => {
   const yAxisLabelX = chartLeft - 56;
   const yAxisLabelY = chartTop + yRange / 2;
 
-  const stackedData = useMemo(() => {
-    if (!keywords.length) {
-      return [];
-    }
-
-    const categoryMap = new Map();
-
-    keywords.forEach((keyword) => {
-      const categoryLabel = String(keyword.topic || keyword.shortLabel || 'Uncategorised');
-      const stage = keyword.funnelStage || 'Unassigned';
-      const volume = Number(keyword.volume ?? 0);
-
-      if (!categoryMap.has(categoryLabel)) {
-        categoryMap.set(categoryLabel, {
-          id: `category-${categoryLabel.toLowerCase().replace(/[^a-z0-9]+/gi, '-')}`,
-          label: categoryLabel,
-          total: 0,
-          segments: new Map(),
-        });
-      }
-
-      const entry = categoryMap.get(categoryLabel);
-      entry.total += volume;
-      const currentValue = entry.segments.get(stage) || 0;
-      entry.segments.set(stage, currentValue + volume);
-    });
-
-    const orderedCategories = Array.from(categoryMap.keys()).sort((a, b) =>
-      a.localeCompare(b, 'fr', { sensitivity: 'base' })
-    );
-
-    return orderedCategories.map((category) => {
-      const entry = categoryMap.get(category);
-      const orderedStages = [
-        ...FUNNEL_STAGE_ORDER.filter((stage) => entry.segments.has(stage)),
-        ...Array.from(entry.segments.keys()).filter((stage) => !FUNNEL_STAGE_ORDER.includes(stage)),
-      ];
-
-      return {
-        id: entry.id,
-        label: entry.label,
-        total: entry.total,
-        segments: orderedStages.map((stage) => ({
-          stage,
-          value: entry.segments.get(stage) || 0,
-          color: FUNNEL_STAGE_COLORS[stage] || FUNNEL_STAGE_COLORS.default,
-        })),
-      };
-    });
-  }, [keywords]);
+  const stackedData = categoryBreakdown;
 
   const stackedCount = stackedData.length;
 
