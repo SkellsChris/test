@@ -13,18 +13,14 @@ const maxRadius = 110;
 
 const formatNumber = (value) => value.toLocaleString('en-US');
 
-const COLOR_PALETTE = [
-  '#6b5bff',
-  '#7c6dff',
-  '#8f7bff',
-  '#9d88ff',
-  '#ae94ff',
-  '#c59eff',
-  '#d9a7ff',
-  '#f3b4ff',
-  '#ffc7de',
-  '#ffd4aa',
-];
+const FUNNEL_STAGE_COLORS = {
+  Awareness: '#0ea5e9',
+  Consideration: '#a855f7',
+  Decision: '#ef4444',
+  default: '#6366f1',
+};
+
+const FUNNEL_STAGE_ORDER = ['Awareness', 'Consideration', 'Decision'];
 
 const QUICK_WIN_RULES = {
   minWs: 20,
@@ -113,30 +109,161 @@ const selectQuickWinKeyword = (keywords) => {
   return best || null;
 };
 
-const fallbackSeoDataset = () => {
-  const maxVolume = Math.max(...SEO_OPPORTUNITY_KEYWORDS.map((keyword) => keyword.volume));
+const layoutKeywords = (keywords) => {
+  if (!keywords.length) {
+    return {
+      keywords: [],
+      maxVolume: 0,
+      maxWs: 0,
+    };
+  }
+
+  const volumes = keywords.map((keyword) => keyword.volume);
+  const wsValues = keywords.map((keyword) => keyword.ws);
+  const minVolume = Math.min(...volumes);
+  const maxVolume = Math.max(...volumes);
+  const maxWs = Math.max(...wsValues, 1);
+
+  const xPadding = Math.max(maxRadius, 80);
+  const yPadding = Math.max(maxRadius, 60);
+  const xRange = Math.max(chartWidth - xPadding * 2, 1);
+  const yRange = Math.max(chartHeight - yPadding * 2, 1);
+  const volumeRange = Math.max(maxVolume - minVolume, 1);
+
+  const positioned = keywords.map((keyword) => {
+    const wsRatio = maxWs ? keyword.ws / maxWs : 0;
+    const volumeRatio = (keyword.volume - minVolume) / volumeRange;
+    const color = FUNNEL_STAGE_COLORS[keyword.funnelStage] || FUNNEL_STAGE_COLORS.default;
+
+    return {
+      ...keyword,
+      color,
+      x: Math.round(xPadding + wsRatio * xRange),
+      y: Math.round(chartHeight - yPadding - volumeRatio * yRange),
+    };
+  });
+
+  return {
+    keywords: positioned,
+    maxVolume,
+    maxWs,
+  };
+};
+
+const buildDatasetFromKeywords = (keywords, { summaryOverride = null, totalCandidates = keywords.length } = {}) => {
+  const { keywords: positionedKeywords, maxVolume, maxWs } = layoutKeywords(keywords);
+
+  if (!positionedKeywords.length) {
+    return {
+      keywords: positionedKeywords,
+      summary: summaryOverride || [],
+      maxVolume,
+      maxWs,
+      averageOpportunity: 0,
+      totalProjectedTraffic: 0,
+      highestOpportunityKeyword: null,
+      quickWinKeyword: null,
+    };
+  }
+
   const averageOpportunity = Math.round(
-    SEO_OPPORTUNITY_KEYWORDS.reduce((sum, keyword) => sum + keyword.opportunity, 0) /
-      SEO_OPPORTUNITY_KEYWORDS.length
+    positionedKeywords.reduce((sum, keyword) => sum + keyword.opportunity, 0) / positionedKeywords.length
   );
-  const totalProjectedTraffic = SEO_OPPORTUNITY_KEYWORDS.reduce(
+  const totalProjectedTraffic = positionedKeywords.reduce(
     (sum, keyword) => sum + keyword.projectedTraffic,
     0
   );
-  const highestOpportunityKeyword = [...SEO_OPPORTUNITY_KEYWORDS]
-    .sort((a, b) => b.opportunity - a.opportunity)
-    .find(Boolean);
-  const quickWinKeyword = selectQuickWinKeyword(SEO_OPPORTUNITY_KEYWORDS);
+  const highestOpportunityKeyword = positionedKeywords.reduce((best, keyword) => {
+    if (!best || keyword.opportunity > best.opportunity) {
+      return keyword;
+    }
+    return best;
+  }, null);
+
+  const quickWinKeyword = selectQuickWinKeyword(positionedKeywords);
+  const quickWinCount = positionedKeywords.filter((keyword) => keyword.quickWin).length;
+
+  const summary =
+    summaryOverride ||
+    [
+      {
+        id: 'growth',
+        label: 'Avg. opportunity score',
+        value: `${averageOpportunity}`,
+        delta:
+          quickWinCount > 0
+            ? `${quickWinCount} quick win${quickWinCount > 1 ? 's' : ''}`
+            : 'No quick wins detected',
+        tone: quickWinCount > 0 ? 'positive' : 'neutral',
+      },
+      {
+        id: 'coverage',
+        label: 'Keywords in sheet',
+        value: `${positionedKeywords.length}`,
+        delta:
+          totalCandidates > positionedKeywords.length
+            ? `${totalCandidates - positionedKeywords.length} filtered (lower volume)`
+            : 'All sheet keywords',
+        tone: 'neutral',
+      },
+      {
+        id: 'traffic',
+        label: 'Projected lift',
+        value: `${formatNumber(totalProjectedTraffic)} visits`,
+        delta: 'Based on win rate',
+        tone: totalProjectedTraffic > 0 ? 'positive' : 'neutral',
+      },
+    ];
 
   return {
-    keywords: SEO_OPPORTUNITY_KEYWORDS,
-    summary: SEO_SUMMARY_METRICS,
+    keywords: positionedKeywords,
+    summary,
     maxVolume,
+    maxWs,
     averageOpportunity,
     totalProjectedTraffic,
-    highestOpportunityKeyword: highestOpportunityKeyword || SEO_OPPORTUNITY_KEYWORDS[0],
+    highestOpportunityKeyword: highestOpportunityKeyword || positionedKeywords[0],
     quickWinKeyword,
   };
+};
+
+const fallbackSeoDataset = () => {
+  const keywords = SEO_OPPORTUNITY_KEYWORDS.map((keyword, index) => {
+    const volume = clampNumber(Number(keyword.volume ?? 0), 0, Number.MAX_SAFE_INTEGER);
+    const ws = clampNumber(Number(keyword.ws ?? 0), 0, 100);
+    const difficulty = clampNumber(Number(keyword.difficulty ?? 0), 0, 100);
+    const fw = clampNumber(Number(keyword.fw ?? 1), 0.5, 3);
+    const intent = keyword.intent || 'Informational';
+    const funnelStage = keyword.funnelStage || 'Awareness';
+    const opportunity = clampNumber(Number(keyword.opportunity ?? computeOpportunityScore(keyword)), 10, 100);
+    const currentPosition = Number.isFinite(keyword.currentPosition)
+      ? keyword.currentPosition
+      : estimatePosition({ ws, difficulty });
+    const winRate = volume > 0 ? clampPercentage((keyword.projectedTraffic / volume) * 100) : 0;
+    const quickWin = meetsQuickWinCriteria({ ws, difficulty, fw, intent, opportunity });
+
+    return {
+      id: keyword.id || `seo-fallback-${index}`,
+      topic: keyword.topic,
+      shortLabel: keyword.shortLabel || buildShortLabel(keyword),
+      volume,
+      difficulty,
+      fw,
+      ws,
+      intent,
+      funnelStage,
+      opportunity,
+      currentPosition,
+      projectedTraffic: clampNumber(Number(keyword.projectedTraffic ?? 0), 0, Number.MAX_SAFE_INTEGER),
+      win: winRate,
+      quickWin,
+    };
+  });
+
+  return buildDatasetFromKeywords(keywords, {
+    summaryOverride: SEO_SUMMARY_METRICS,
+    totalCandidates: keywords.length,
+  });
 };
 
 const buildSeoOpportunityDataset = (rows) => {
@@ -160,6 +287,7 @@ const buildSeoOpportunityDataset = (rows) => {
         fw: clampNumber(Number(row.fwValue ?? row.fw ?? 1), 0.5, 3),
         ws: clampNumber(Number(row.ws ?? 0), 0, 100),
         intent: row.intent || 'Informational',
+        funnelStage: row.funnelStage || 'Awareness',
         win: clampPercentage(row.win),
       };
     })
@@ -176,7 +304,6 @@ const buildSeoOpportunityDataset = (rows) => {
   const keywords = selected.map((row, index) => {
     const opportunity = computeOpportunityScore(row);
     const projectedTraffic = Math.round((row.volume * row.win) / 100);
-    const color = COLOR_PALETTE[index % COLOR_PALETTE.length];
     const shortLabel = buildShortLabel(row);
     const currentPosition = estimatePosition(row);
     const quickWin = meetsQuickWinCriteria({ ...row, opportunity });
@@ -190,92 +317,24 @@ const buildSeoOpportunityDataset = (rows) => {
       fw: row.fw,
       ws: row.ws,
       intent: row.intent,
+      funnelStage: row.funnelStage,
       opportunity,
       currentPosition,
       projectedTraffic,
-      color,
       quickWin,
-      x: 0,
-      y: 0,
     };
   });
 
-  const columnCount = Math.max(1, Math.ceil(Math.sqrt(keywords.length)));
-  const rowCount = Math.max(1, Math.ceil(keywords.length / columnCount));
-  const xSpacing = chartWidth / (columnCount + 1);
-  const ySpacing = chartHeight / (rowCount + 1);
-
-  keywords.forEach((keyword, index) => {
-    const columnIndex = index % columnCount;
-    const rowIndex = Math.floor(index / columnCount);
-    keyword.x = Math.round(xSpacing * (columnIndex + 1));
-    keyword.y = Math.round(ySpacing * (rowIndex + 1));
+  return buildDatasetFromKeywords(keywords, {
+    totalCandidates: normalised.length,
   });
-
-  const maxVolume = Math.max(...keywords.map((keyword) => keyword.volume));
-  const averageOpportunity = Math.round(
-    keywords.reduce((sum, keyword) => sum + keyword.opportunity, 0) / keywords.length
-  );
-  const totalProjectedTraffic = keywords.reduce(
-    (sum, keyword) => sum + keyword.projectedTraffic,
-    0
-  );
-  const highestOpportunityKeyword = keywords.reduce((best, keyword) => {
-    if (!best || keyword.opportunity > best.opportunity) {
-      return keyword;
-    }
-    return best;
-  }, null);
-
-  const quickWinKeyword = selectQuickWinKeyword(keywords);
-  const quickWinCount = keywords.filter((keyword) => keyword.quickWin).length;
-
-  const summary = [
-    {
-      id: 'growth',
-      label: 'Avg. opportunity score',
-      value: `${averageOpportunity}`,
-      delta:
-        quickWinCount > 0
-          ? `${quickWinCount} quick win${quickWinCount > 1 ? 's' : ''}`
-          : 'No quick wins detected',
-      tone: quickWinCount > 0 ? 'positive' : 'neutral',
-    },
-    {
-      id: 'coverage',
-      label: 'Keywords in sheet',
-      value: `${keywords.length}`,
-      delta:
-        normalised.length > keywords.length
-          ? `${normalised.length - keywords.length} filtered (low volume)`
-          : 'All sheet keywords',
-      tone: 'neutral',
-    },
-    {
-      id: 'traffic',
-      label: 'Projected lift',
-      value: `${formatNumber(totalProjectedTraffic)} visits`,
-      delta: 'Based on win rate',
-      tone: totalProjectedTraffic > 0 ? 'positive' : 'neutral',
-    },
-  ];
-
-  return {
-    keywords,
-    summary,
-    maxVolume,
-    averageOpportunity,
-    totalProjectedTraffic,
-    highestOpportunityKeyword: highestOpportunityKeyword || keywords[0],
-    quickWinKeyword,
-  };
 };
 
 const SeoOpportunity = ({ rows }) => {
   const {
     keywords,
     summary,
-    maxVolume,
+    maxWs,
     averageOpportunity,
     totalProjectedTraffic,
     highestOpportunityKeyword,
@@ -283,12 +342,23 @@ const SeoOpportunity = ({ rows }) => {
   } = useMemo(() => buildSeoOpportunityDataset(rows), [rows]);
 
   const radiusScale = useMemo(() => {
-    const safeMax = maxVolume || 1;
-    return (volume) => {
-      const ratio = safeMax ? volume / safeMax : 0;
+    const safeMax = maxWs || 1;
+    return (ws) => {
+      const ratio = safeMax ? ws / safeMax : 0;
       return minRadius + ratio * (maxRadius - minRadius);
     };
-  }, [maxVolume]);
+  }, [maxWs]);
+
+  const stageLegend = useMemo(
+    () =>
+      FUNNEL_STAGE_ORDER.map((stage) => ({
+        stage,
+        color: FUNNEL_STAGE_COLORS[stage] || FUNNEL_STAGE_COLORS.default,
+      })),
+    []
+  );
+
+  const captionKeyword = highestOpportunityKeyword || keywords[0];
 
   const renderBubbleLabel = (keyword, radius) => {
     const isCompact = radius < 70;
@@ -311,8 +381,8 @@ const SeoOpportunity = ({ rows }) => {
           <p className="card__eyebrow">Keyword landscape</p>
           <h2 id="seo-opportunity-title">SEO opportunity map</h2>
           <p className="card__subtitle">
-            Bubble size represents monthly search volume. Colour intensity highlights higher opportunity
-            scores.
+            X-axis and bubble size show winning score (WS), Y-axis indicates monthly search volume, and colour
+            represents the funnel stage.
           </p>
         </div>
         <div className="seo-opportunity__summary" aria-live="polite">
@@ -358,7 +428,7 @@ const SeoOpportunity = ({ rows }) => {
             </defs>
 
             {keywords.map((keyword) => {
-              const radius = radiusScale(keyword.volume);
+              const radius = radiusScale(keyword.ws);
               return (
                 <g key={keyword.id} transform={`translate(${keyword.x}, ${keyword.y})`} className="seo-bubble">
                   <circle
@@ -374,9 +444,14 @@ const SeoOpportunity = ({ rows }) => {
             })}
           </svg>
           <figcaption id="seo-bubble-caption" className="seo-bubble-chart__caption">
-            Highlighted keyword &ldquo;{highestOpportunityKeyword.shortLabel}&rdquo; offers the highest opportunity score at{' '}
-            {highestOpportunityKeyword.opportunity} with {formatNumber(highestOpportunityKeyword.volume)} monthly
-            searches.
+            {captionKeyword ? (
+              <>
+                Highlighted keyword &ldquo;{captionKeyword.shortLabel}&rdquo; offers the highest opportunity score at{' '}
+                {captionKeyword.opportunity} with {formatNumber(captionKeyword.volume)} monthly searches.
+              </>
+            ) : (
+              'No keyword data available.'
+            )}
           </figcaption>
         </figure>
 
@@ -384,12 +459,27 @@ const SeoOpportunity = ({ rows }) => {
           <div className="seo-opportunity__legend">
             <span className="seo-opportunity__legend-title">Legend</span>
             <div className="seo-opportunity__legend-item">
-              <span className="seo-opportunity__legend-swatch" aria-hidden="true" />
-              <span>Bubble size → search volume</span>
+              <span className="seo-opportunity__legend-swatch seo-opportunity__legend-swatch--ws" aria-hidden="true" />
+              <span>X-axis &amp; bubble size → Winning score (WS)</span>
             </div>
             <div className="seo-opportunity__legend-item">
-              <span className="seo-opportunity__legend-swatch seo-opportunity__legend-swatch--intense" aria-hidden="true" />
-              <span>Deeper colour → higher opportunity</span>
+              <span className="seo-opportunity__legend-swatch seo-opportunity__legend-swatch--volume" aria-hidden="true" />
+              <span>Y-axis → Monthly search volume</span>
+            </div>
+            <div className="seo-opportunity__legend-item seo-opportunity__legend-item--stages">
+              <span className="seo-opportunity__legend-item-label">Colour → Funnel stage</span>
+              <div className="seo-opportunity__legend-stage-list" role="list">
+                {stageLegend.map(({ stage, color }) => (
+                  <span key={stage} className="seo-opportunity__legend-stage" role="listitem">
+                    <span
+                      className="seo-opportunity__legend-stage-swatch"
+                      style={{ backgroundColor: color }}
+                      aria-hidden="true"
+                    />
+                    <span>{stage}</span>
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
 
