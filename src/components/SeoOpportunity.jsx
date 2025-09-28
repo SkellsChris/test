@@ -1,10 +1,6 @@
 import { useMemo } from 'react';
 import PropTypes from 'prop-types';
-import {
-  SEO_OPPORTUNITY_KEYWORDS,
-  SEO_SUMMARY_METRICS,
-} from '../data/seoOpportunity.js';
-import QuickWinIcon from './QuickWinIcon.jsx';
+import { SEO_OPPORTUNITY_KEYWORDS } from '../data/seoOpportunity.js';
 
 const chartWidth = 960;
 const chartHeight = 480;
@@ -56,12 +52,6 @@ const meetsQuickWinCriteria = (keyword) => {
   );
 };
 
-const opportunityToneClass = {
-  positive: 'seo-metric__delta--positive',
-  negative: 'seo-metric__delta--negative',
-  neutral: 'seo-metric__delta--neutral',
-};
-
 const clampNumber = (value, min, max) => {
   if (!Number.isFinite(value)) {
     return min;
@@ -99,23 +89,6 @@ const estimatePosition = (row) => {
   const difficulty = clampNumber(Number(row.difficulty ?? 0), 0, 100);
   const base = 20 - ws / 5 + difficulty / 20;
   return Math.max(1, Math.round(base));
-};
-
-const selectQuickWinKeyword = (keywords) => {
-  const eligible = keywords.filter((keyword) => meetsQuickWinCriteria(keyword));
-  if (!eligible.length) {
-    return null;
-  }
-  const [best] = eligible.sort((a, b) => {
-    if (b.ws !== a.ws) {
-      return b.ws - a.ws;
-    }
-    if (b.opportunity !== a.opportunity) {
-      return b.opportunity - a.opportunity;
-    }
-    return b.volume - a.volume;
-  });
-  return best || null;
 };
 
 const layoutKeywords = (keywords) => {
@@ -169,7 +142,7 @@ const layoutKeywords = (keywords) => {
   };
 };
 
-const buildDatasetFromKeywords = (keywords, { summaryOverride = null, totalCandidates = keywords.length } = {}) => {
+const buildDatasetFromKeywords = (keywords) => {
   const {
     keywords: positionedKeywords,
     maxVolume,
@@ -184,14 +157,12 @@ const buildDatasetFromKeywords = (keywords, { summaryOverride = null, totalCandi
   if (!positionedKeywords.length) {
     return {
       keywords: positionedKeywords,
-      summary: summaryOverride || [],
       maxVolume,
       minVolume,
       maxWs,
       averageOpportunity: 0,
       totalProjectedTraffic: 0,
       highestOpportunityKeyword: null,
-      quickWinKeyword: null,
       plotArea: {
         xPadding,
         yPadding,
@@ -215,51 +186,14 @@ const buildDatasetFromKeywords = (keywords, { summaryOverride = null, totalCandi
     return best;
   }, null);
 
-  const quickWinKeyword = selectQuickWinKeyword(positionedKeywords);
-  const quickWinCount = positionedKeywords.filter((keyword) => keyword.quickWin).length;
-
-  const summary =
-    summaryOverride ||
-    [
-      {
-        id: 'growth',
-        label: 'Avg. opportunity score',
-        value: `${averageOpportunity}`,
-        delta:
-          quickWinCount > 0
-            ? `${quickWinCount} quick win${quickWinCount > 1 ? 's' : ''}`
-            : 'No quick wins detected',
-        tone: quickWinCount > 0 ? 'positive' : 'neutral',
-      },
-      {
-        id: 'coverage',
-        label: 'Keywords in sheet',
-        value: `${positionedKeywords.length}`,
-        delta:
-          totalCandidates > positionedKeywords.length
-            ? `${totalCandidates - positionedKeywords.length} filtered (lower volume)`
-            : 'All sheet keywords',
-        tone: 'neutral',
-      },
-      {
-        id: 'traffic',
-        label: 'Projected lift',
-        value: `${formatNumber(totalProjectedTraffic)} visits`,
-        delta: 'Based on win rate',
-        tone: totalProjectedTraffic > 0 ? 'positive' : 'neutral',
-      },
-    ];
-
   return {
     keywords: positionedKeywords,
-    summary,
     maxVolume,
     minVolume,
     maxWs,
     averageOpportunity,
     totalProjectedTraffic,
     highestOpportunityKeyword: highestOpportunityKeyword || positionedKeywords[0],
-    quickWinKeyword,
     plotArea: {
       xPadding,
       yPadding,
@@ -302,10 +236,7 @@ const fallbackSeoDataset = () => {
     };
   });
 
-  return buildDatasetFromKeywords(keywords, {
-    summaryOverride: SEO_SUMMARY_METRICS,
-    totalCandidates: keywords.length,
-  });
+  return buildDatasetFromKeywords(keywords);
 };
 
 const buildSeoOpportunityDataset = (rows) => {
@@ -367,15 +298,12 @@ const buildSeoOpportunityDataset = (rows) => {
     };
   });
 
-  return buildDatasetFromKeywords(keywords, {
-    totalCandidates: normalised.length,
-  });
+  return buildDatasetFromKeywords(keywords);
 };
 
 const SeoOpportunity = ({ rows }) => {
   const {
     keywords,
-    summary,
     minVolume,
     maxVolume,
     maxWs,
@@ -383,7 +311,6 @@ const SeoOpportunity = ({ rows }) => {
     averageOpportunity,
     totalProjectedTraffic,
     highestOpportunityKeyword,
-    quickWinKeyword,
   } = useMemo(() => buildSeoOpportunityDataset(rows), [rows]);
 
   const { xPadding, yPadding, xRange, yRange } = plotArea;
@@ -453,15 +380,6 @@ const SeoOpportunity = ({ rows }) => {
       };
     });
   }, [chartBottom, maxWs, yRange]);
-
-  const stageLegend = useMemo(
-    () =>
-      FUNNEL_STAGE_ORDER.map((stage) => ({
-        stage,
-        color: FUNNEL_STAGE_COLORS[stage] || FUNNEL_STAGE_COLORS.default,
-      })),
-    []
-  );
 
   const captionKeyword = highestOpportunityKeyword || keywords[0];
 
@@ -898,65 +816,6 @@ const SeoOpportunity = ({ rows }) => {
           </figure>
         </div>
 
-        <aside className="seo-opportunity__sidebar" aria-label="Keyword insights">
-          <div className="seo-opportunity__legend">
-            <span className="seo-opportunity__legend-title">Legend</span>
-            <div className="seo-opportunity__legend-item">
-              <span className="seo-opportunity__legend-swatch seo-opportunity__legend-swatch--volume" aria-hidden="true" />
-              <span>X-axis → Monthly search volume</span>
-            </div>
-            <div className="seo-opportunity__legend-item">
-              <span className="seo-opportunity__legend-swatch seo-opportunity__legend-swatch--ws" aria-hidden="true" />
-              <span>Y-axis &amp; bubble size → Winning score (WS)</span>
-            </div>
-            <div className="seo-opportunity__legend-item seo-opportunity__legend-item--stages">
-              <span className="seo-opportunity__legend-item-label">Colour → Funnel stage</span>
-              <div className="seo-opportunity__legend-stage-list" role="list">
-                {stageLegend.map(({ stage, color }) => (
-                  <span key={stage} className="seo-opportunity__legend-stage" role="listitem">
-                    <span
-                      className="seo-opportunity__legend-stage-swatch"
-                      style={{ backgroundColor: color }}
-                      aria-hidden="true"
-                    />
-                    <span>{stage}</span>
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <ul className="seo-metrics" role="list">
-            {summary.map((metric) => (
-              <li key={metric.id} className="seo-metric" role="listitem">
-                <p className="seo-metric__label">{metric.label}</p>
-                <p className="seo-metric__value">{metric.value}</p>
-                <p className={`seo-metric__delta ${opportunityToneClass[metric.tone]}`}>{metric.delta}</p>
-              </li>
-            ))}
-          </ul>
-
-          <div className="seo-keyword-callout">
-            <p className="seo-keyword-callout__label">
-              <QuickWinIcon className="seo-keyword-callout__icon" />
-              <span>Best quick win</span>
-            </p>
-            {quickWinKeyword ? (
-              <>
-                <p className="seo-keyword-callout__keyword">{quickWinKeyword.topic}</p>
-                <p className="seo-keyword-callout__meta">
-                  Position {quickWinKeyword.currentPosition} · Difficulty {quickWinKeyword.difficulty} · W.S.{' '}
-                  {quickWinKeyword.ws} · F.W. {quickWinKeyword.fw.toFixed(1)} · Intent {quickWinKeyword.intent}
-                </p>
-              </>
-            ) : (
-              <p className="seo-keyword-callout__meta">
-                No keywords currently meet the quick win criteria (W.S. &gt; 20, Difficulty ≤ 20, F.W. ≥ 1.5, Intent
-                Commercial or Transactional).
-              </p>
-            )}
-          </div>
-        </aside>
       </div>
     </section>
   );
