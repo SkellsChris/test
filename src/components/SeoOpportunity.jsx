@@ -29,7 +29,16 @@ const FUNNEL_STAGE_COLORS = {
   default: '#6366f1',
 };
 
+const INTENT_COLORS = {
+  Informational: '#38bdf8',
+  Commercial: '#f97316',
+  Transactional: '#22c55e',
+  Navigational: '#c084fc',
+  default: '#64748b',
+};
+
 const FUNNEL_STAGE_ORDER = ['Awareness', 'Consideration', 'Decision'];
+const INTENT_ORDER = ['Informational', 'Commercial', 'Transactional', 'Navigational'];
 
 const QUICK_WIN_RULES = {
   minWs: 20,
@@ -488,19 +497,76 @@ const SeoOpportunity = ({ rows }) => {
       return [];
     }
 
-    return keywords.map((keyword) => ({
-      id: keyword.id,
-      label: keyword.shortLabel,
-      topic: keyword.topic,
-      stage: keyword.funnelStage,
-      total: keyword.volume,
-      segments: FUNNEL_STAGE_ORDER.map((stage) => ({
-        stage,
-        value: stage === keyword.funnelStage ? keyword.volume : 0,
-        color: FUNNEL_STAGE_COLORS[stage] || FUNNEL_STAGE_COLORS.default,
-      })),
-    }));
+    const stageMap = new Map();
+
+    keywords.forEach((keyword) => {
+      const stage = keyword.funnelStage || 'Unassigned';
+      const intent = keyword.intent || 'Unclassified';
+      const volume = Number(keyword.volume ?? 0);
+      if (!stageMap.has(stage)) {
+        stageMap.set(stage, {
+          id: `stage-${stage.toLowerCase().replace(/[^a-z0-9]+/gi, '-')}`,
+          label: stage,
+          total: 0,
+          segments: new Map(),
+        });
+      }
+
+      const entry = stageMap.get(stage);
+      entry.total += volume;
+      const currentValue = entry.segments.get(intent) || 0;
+      entry.segments.set(intent, currentValue + volume);
+    });
+
+    const orderedStages = [
+      ...FUNNEL_STAGE_ORDER.filter((stage) => stageMap.has(stage)),
+      ...Array.from(stageMap.keys()).filter((stage) => !FUNNEL_STAGE_ORDER.includes(stage)),
+    ];
+
+    return orderedStages.map((stage) => {
+      const entry = stageMap.get(stage);
+      const orderedIntents = [
+        ...INTENT_ORDER.filter((intent) => entry.segments.has(intent)),
+        ...Array.from(entry.segments.keys()).filter((intent) => !INTENT_ORDER.includes(intent)),
+      ];
+
+      return {
+        id: entry.id,
+        label: entry.label,
+        total: entry.total,
+        segments: orderedIntents.map((intent) => ({
+          intent,
+          value: entry.segments.get(intent) || 0,
+          color: INTENT_COLORS[intent] || INTENT_COLORS.default,
+        })),
+      };
+    });
   }, [keywords]);
+
+  const intentLegend = useMemo(() => {
+    if (!stackedData.length) {
+      return [];
+    }
+
+    const seen = new Map();
+    stackedData.forEach((group) => {
+      group.segments.forEach((segment) => {
+        if (!seen.has(segment.intent)) {
+          seen.set(segment.intent, segment.color);
+        }
+      });
+    });
+
+    const ordered = [
+      ...INTENT_ORDER.filter((intent) => seen.has(intent)),
+      ...Array.from(seen.keys()).filter((intent) => !INTENT_ORDER.includes(intent)),
+    ];
+
+    return ordered.map((intent) => ({
+      intent,
+      color: seen.get(intent) || INTENT_COLORS.default,
+    }));
+  }, [stackedData]);
 
   const stackedCount = stackedData.length;
 
@@ -730,7 +796,7 @@ const SeoOpportunity = ({ rows }) => {
           >
             <div className="seo-stacked-chart__header">
               <h3 id="seo-stacked-title">Funnel stage distribution</h3>
-              <p>Compare how each procedure contributes to search demand at every stage of the journey.</p>
+              <p>Review how demand accumulates at each funnel stage, segmented by dominant search intent.</p>
             </div>
             {stackedData.length ? (
               <svg
@@ -796,7 +862,7 @@ const SeoOpportunity = ({ rows }) => {
                     y={stackedChartHeight - 32}
                     textAnchor="middle"
                   >
-                    Procedures
+                    Funnel stages
                   </text>
                   <text
                     className="seo-stacked-chart__axis-label"
@@ -816,7 +882,7 @@ const SeoOpportunity = ({ rows }) => {
                     return (
                       <g key={item.id} transform={`translate(${x}, 0)`}>
                         <title>
-                          {`${item.topic} – ${item.stage} stage with ${formatNumber(item.total)} monthly searches`}
+                          {`${item.label} stage – ${formatNumber(item.total)} total searches`}
                         </title>
                         {item.segments.map((segment) => {
                           if (!segment.value) {
@@ -831,7 +897,7 @@ const SeoOpportunity = ({ rows }) => {
 
                           return (
                             <rect
-                              key={segment.stage}
+                              key={segment.intent}
                               className="seo-stacked-chart__bar"
                               x={0}
                               y={y}
@@ -839,7 +905,11 @@ const SeoOpportunity = ({ rows }) => {
                               height={height}
                               fill={segment.color}
                               rx={6}
-                            />
+                            >
+                              <title>
+                                {`${segment.intent} intent contributes ${formatNumber(segment.value)} searches in the ${item.label} stage`}
+                              </title>
+                            </rect>
                           );
                         })}
                       </g>
@@ -851,8 +921,8 @@ const SeoOpportunity = ({ rows }) => {
               <p className="seo-stacked-chart__empty">No keyword breakdown available.</p>
             )}
             <figcaption id="seo-stacked-caption" className="seo-stacked-chart__caption">
-              Each stacked column shows the monthly search volume for a procedure, coloured by the funnel stage assigned to
-              that opportunity.
+              Each stacked column aggregates monthly search volume for a funnel stage and colours the segments by search
+              intent to highlight how audiences progress through the journey.
             </figcaption>
           </figure>
         </div>
@@ -883,6 +953,23 @@ const SeoOpportunity = ({ rows }) => {
                 ))}
               </div>
             </div>
+            {intentLegend.length ? (
+              <div className="seo-opportunity__legend-item seo-opportunity__legend-item--intents">
+                <span className="seo-opportunity__legend-item-label">Colour (stacked) → Search intent</span>
+                <div className="seo-opportunity__legend-stage-list" role="list">
+                  {intentLegend.map(({ intent, color }) => (
+                    <span key={intent} className="seo-opportunity__legend-stage" role="listitem">
+                      <span
+                        className="seo-opportunity__legend-stage-swatch"
+                        style={{ backgroundColor: color }}
+                        aria-hidden="true"
+                      />
+                      <span>{intent}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <ul className="seo-metrics" role="list">
