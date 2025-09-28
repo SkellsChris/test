@@ -422,19 +422,51 @@ const App = () => {
               <label className="project-switcher__label" htmlFor="project-selector">
                 Projet
               </label>
-              <select
-                id="project-selector"
-                className="project-switcher__select"
-                value={activeProject}
-                onChange={(event) => setActiveProject(event.target.value)}
-                disabled={isProjectLoading || projects.length === 0}
-              >
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.label}
-                  </option>
-                ))}
-              </select>
+              <div className="project-switcher__control">
+                <select
+                  id="project-selector"
+                  className="project-switcher__select"
+                  value={activeProject}
+                  onChange={(event) => setActiveProject(event.target.value)}
+                  disabled={isProjectLoading || projects.length === 0}
+                >
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="project-switcher__icon-button"
+                  onClick={handleProjectDelete}
+                  aria-label="Supprimer le projet"
+                  disabled={
+                    isProjectLoading ||
+                    isProjectDeleting ||
+                    projects.length === 0 ||
+                    !activeProject
+                  }
+                >
+                  <svg
+                    className="project-switcher__icon"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M9 3.75h6m-9 3h12M10.5 10.5v6m3-6v6M5.25 6.75 6 19.5c.063 1.05.938 1.875 1.988 1.875h8.024c1.05 0 1.925-.825 1.988-1.875L18.75 6.75"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              </div>
               <div className="project-switcher__actions">
                 <button
                   type="button"
@@ -443,19 +475,6 @@ const App = () => {
                   disabled={isProjectLoading || !user}
                 >
                   Nouveau projet
-                </button>
-                <button
-                  type="button"
-                  className="project-switcher__button project-switcher__button--danger"
-                  onClick={handleProjectDelete}
-                  disabled={
-                    isProjectLoading ||
-                    isProjectDeleting ||
-                    projects.length === 0 ||
-                    !activeProject
-                  }
-                >
-                  Supprimer le projet
                 </button>
                 {!user ? <span className="project-switcher__hint">Veuillez vous connecter</span> : null}
               </div>
