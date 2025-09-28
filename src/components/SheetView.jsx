@@ -1,5 +1,7 @@
 import PropTypes from 'prop-types';
 
+import { resolveWinDisplayValue } from '../utils/quickWin.js';
+
 const COLUMNS = [
   { key: 'primaryKeyword', label: 'Primary keyword' },
   { key: 'secondaryKeyword', label: 'Secondary keyword' },
@@ -46,6 +48,11 @@ const formatPercentage = (value) => {
 };
 
 const formatCellValue = (row, column) => {
+  if (column.key === 'win') {
+    const displayValue = resolveWinDisplayValue(row);
+    return displayValue.text || '—';
+  }
+
   const value = row?.[column.key];
 
   if (column.type === 'number') {
