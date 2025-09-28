@@ -110,11 +110,21 @@ const selectQuickWinKeyword = (keywords) => {
 };
 
 const layoutKeywords = (keywords) => {
+  const xPadding = Math.max(maxRadius, 80);
+  const yPadding = Math.max(maxRadius, 60);
+  const xRange = Math.max(chartWidth - xPadding * 2, 1);
+  const yRange = Math.max(chartHeight - yPadding * 2, 1);
+
   if (!keywords.length) {
     return {
       keywords: [],
       maxVolume: 0,
+      minVolume: 0,
       maxWs: 0,
+      xPadding,
+      yPadding,
+      xRange,
+      yRange,
     };
   }
 
@@ -123,11 +133,6 @@ const layoutKeywords = (keywords) => {
   const minVolume = Math.min(...volumes);
   const maxVolume = Math.max(...volumes);
   const maxWs = Math.max(...wsValues, 1);
-
-  const xPadding = Math.max(maxRadius, 80);
-  const yPadding = Math.max(maxRadius, 60);
-  const xRange = Math.max(chartWidth - xPadding * 2, 1);
-  const yRange = Math.max(chartHeight - yPadding * 2, 1);
   const volumeRange = Math.max(maxVolume - minVolume, 1);
 
   const positioned = keywords.map((keyword) => {
@@ -146,23 +151,44 @@ const layoutKeywords = (keywords) => {
   return {
     keywords: positioned,
     maxVolume,
+    minVolume,
     maxWs,
+    xPadding,
+    yPadding,
+    xRange,
+    yRange,
   };
 };
 
 const buildDatasetFromKeywords = (keywords, { summaryOverride = null, totalCandidates = keywords.length } = {}) => {
-  const { keywords: positionedKeywords, maxVolume, maxWs } = layoutKeywords(keywords);
+  const {
+    keywords: positionedKeywords,
+    maxVolume,
+    minVolume,
+    maxWs,
+    xPadding,
+    yPadding,
+    xRange,
+    yRange,
+  } = layoutKeywords(keywords);
 
   if (!positionedKeywords.length) {
     return {
       keywords: positionedKeywords,
       summary: summaryOverride || [],
       maxVolume,
+      minVolume,
       maxWs,
       averageOpportunity: 0,
       totalProjectedTraffic: 0,
       highestOpportunityKeyword: null,
       quickWinKeyword: null,
+      plotArea: {
+        xPadding,
+        yPadding,
+        xRange,
+        yRange,
+      },
     };
   }
 
@@ -219,11 +245,18 @@ const buildDatasetFromKeywords = (keywords, { summaryOverride = null, totalCandi
     keywords: positionedKeywords,
     summary,
     maxVolume,
+    minVolume,
     maxWs,
     averageOpportunity,
     totalProjectedTraffic,
     highestOpportunityKeyword: highestOpportunityKeyword || positionedKeywords[0],
     quickWinKeyword,
+    plotArea: {
+      xPadding,
+      yPadding,
+      xRange,
+      yRange,
+    },
   };
 };
 
@@ -334,12 +367,21 @@ const SeoOpportunity = ({ rows }) => {
   const {
     keywords,
     summary,
+    minVolume,
+    maxVolume,
     maxWs,
+    plotArea,
     averageOpportunity,
     totalProjectedTraffic,
     highestOpportunityKeyword,
     quickWinKeyword,
   } = useMemo(() => buildSeoOpportunityDataset(rows), [rows]);
+
+  const { xPadding, yPadding, xRange, yRange } = plotArea;
+  const chartBottom = chartHeight - yPadding;
+  const chartTop = yPadding;
+  const chartLeft = xPadding;
+  const chartRight = xPadding + xRange;
 
   const radiusScale = useMemo(() => {
     const safeMax = maxWs || 1;
@@ -348,6 +390,53 @@ const SeoOpportunity = ({ rows }) => {
       return minRadius + ratio * (maxRadius - minRadius);
     };
   }, [maxWs]);
+
+  const xTicks = useMemo(() => {
+    const steps = 4;
+    const safeMax = maxWs || 0;
+    if (!safeMax) {
+      return [
+        {
+          value: 0,
+          position: chartLeft,
+        },
+      ];
+    }
+
+    return Array.from({ length: steps + 1 }, (_, index) => {
+      const value = (safeMax / steps) * index;
+      const ratio = safeMax ? value / safeMax : 0;
+      return {
+        value: Math.round(value),
+        position: chartLeft + ratio * xRange,
+      };
+    });
+  }, [chartLeft, maxWs, xRange]);
+
+  const yTicks = useMemo(() => {
+    const steps = 4;
+    const safeMin = Number.isFinite(minVolume) ? minVolume : 0;
+    const safeMax = Number.isFinite(maxVolume) ? maxVolume : safeMin;
+    const range = safeMax - safeMin;
+
+    if (range <= 0) {
+      return [
+        {
+          value: Math.round(safeMin),
+          position: chartBottom,
+        },
+      ];
+    }
+
+    return Array.from({ length: steps + 1 }, (_, index) => {
+      const value = safeMin + (range / steps) * index;
+      const ratio = range ? (value - safeMin) / range : 0;
+      return {
+        value: Math.round(value),
+        position: chartBottom - ratio * yRange,
+      };
+    });
+  }, [chartBottom, maxVolume, minVolume, yRange]);
 
   const stageLegend = useMemo(
     () =>
@@ -373,6 +462,10 @@ const SeoOpportunity = ({ rows }) => {
       </>
     );
   };
+
+  const xAxisLabelY = chartBottom + 48;
+  const yAxisLabelX = chartLeft - 56;
+  const yAxisLabelY = chartTop + yRange / 2;
 
   return (
     <section className="card seo-opportunity-card" aria-labelledby="seo-opportunity-title">
@@ -426,6 +519,87 @@ const SeoOpportunity = ({ rows }) => {
                 </radialGradient>
               ))}
             </defs>
+
+            <g className="seo-bubble-chart__grid" aria-hidden="true">
+              {xTicks.map((tick, index) =>
+                index === 0 ? null : (
+                  <line
+                    key={`grid-x-${tick.value}-${index}`}
+                    className="seo-bubble-chart__grid-line"
+                    x1={tick.position}
+                    y1={chartTop}
+                    x2={tick.position}
+                    y2={chartBottom}
+                  />
+                )
+              )}
+              {yTicks.map((tick, index) =>
+                index === yTicks.length - 1 ? null : (
+                  <line
+                    key={`grid-y-${tick.value}-${index}`}
+                    className="seo-bubble-chart__grid-line"
+                    x1={chartLeft}
+                    y1={tick.position}
+                    x2={chartRight}
+                    y2={tick.position}
+                  />
+                )
+              )}
+            </g>
+
+            <g className="seo-bubble-chart__axes" aria-hidden="true">
+              <line
+                className="seo-bubble-chart__axis"
+                x1={chartLeft}
+                y1={chartBottom}
+                x2={chartRight}
+                y2={chartBottom}
+              />
+              <line
+                className="seo-bubble-chart__axis"
+                x1={chartLeft}
+                y1={chartTop}
+                x2={chartLeft}
+                y2={chartBottom}
+              />
+
+              {xTicks.map((tick) => (
+                <text
+                  key={`tick-x-${tick.value}-${tick.position}`}
+                  className="seo-bubble-chart__tick-label"
+                  x={tick.position}
+                  y={chartBottom + 24}
+                  textAnchor="middle"
+                >
+                  {Math.round(tick.value)}
+                </text>
+              ))}
+
+              {yTicks.map((tick) => (
+                <text
+                  key={`tick-y-${tick.value}-${tick.position}`}
+                  className="seo-bubble-chart__tick-label"
+                  x={chartLeft - 12}
+                  y={tick.position + 4}
+                  textAnchor="end"
+                >
+                  {formatNumber(Math.round(tick.value))}
+                </text>
+              ))}
+
+              <text className="seo-bubble-chart__axis-label" x={chartLeft + xRange / 2} y={xAxisLabelY} textAnchor="middle">
+                Winning score (WS)
+              </text>
+              <text
+                className="seo-bubble-chart__axis-label"
+                x={yAxisLabelX}
+                y={yAxisLabelY}
+                textAnchor="middle"
+                transform={`rotate(-90 ${yAxisLabelX} ${yAxisLabelY})`}
+              >
+                Monthly search volume
+              </text>
+            </g>
 
             {keywords.map((keyword) => {
               const radius = radiusScale(keyword.ws);

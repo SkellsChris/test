@@ -401,6 +401,30 @@ body {
   display: block;
 }
 
+.seo-bubble-chart__grid-line {
+  stroke: rgba(15, 23, 42, 0.08);
+  stroke-dasharray: 4 6;
+}
+
+.seo-bubble-chart__axis {
+  stroke: rgba(15, 23, 42, 0.18);
+  stroke-width: 1.5;
+}
+
+.seo-bubble-chart__axis-label {
+  fill: var(--text-soft);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.seo-bubble-chart__tick-label {
+  fill: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
 .seo-bubble-chart__caption {
   margin: 1.4rem 0 0;
   font-size: 0.9rem;
