@@ -575,12 +575,16 @@ const SeoOpportunity = ({ rows }) => {
     }
 
     const step = stackedChartInnerWidth / stackedCount;
-    const width = Math.min(52, Math.max(18, step * 0.6));
-    const offset = (step - width) / 2;
+    const width = Math.max(
+      Math.min(step * 0.7, 52),
+      Math.min(step, 12)
+    );
+    const safeWidth = Math.min(width, step);
+    const offset = (step - safeWidth) / 2;
 
     return {
       step,
-      width,
+      width: safeWidth,
       offset,
     };
   }, [stackedChartInnerWidth, stackedCount]);
