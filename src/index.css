@@ -2463,7 +2463,8 @@ body {
   justify-self: end;
   max-width: 100%;
   line-height: 1.2;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .totals-panel__footer {
