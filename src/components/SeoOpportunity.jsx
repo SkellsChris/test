@@ -142,6 +142,103 @@ const layoutKeywords = (keywords) => {
   };
 };
 
+const buildCategoryId = (label) => {
+  const safeLabel = String(label || '').trim();
+  const slug = safeLabel.toLowerCase().replace(/[^a-z0-9]+/gi, '-');
+  return `category-${slug || 'uncategorised'}`;
+};
+
+const aggregateKeywordsByCategory = (keywords) => {
+  if (!Array.isArray(keywords) || keywords.length === 0) {
+    return [];
+  }
+
+  const categories = new Map();
+
+  keywords.forEach((keyword) => {
+    if (!keyword) {
+      return;
+    }
+
+    const volume = Number(keyword.volume ?? 0);
+    if (!Number.isFinite(volume) || volume <= 0) {
+      return;
+    }
+
+    const label =
+      keyword.topic || keyword.cluster || keyword.primaryKeyword || keyword.shortLabel || 'Uncategorised';
+    const id = buildCategoryId(label);
+
+    if (!categories.has(id)) {
+      categories.set(id, {
+        id,
+        label,
+        totalVolume: 0,
+        totalProjectedTraffic: 0,
+        weighted: {
+          ws: 0,
+          difficulty: 0,
+          fw: 0,
+          opportunity: 0,
+          position: 0,
+        },
+        weight: 0,
+      });
+    }
+
+    const entry = categories.get(id);
+    const safeWs = Number(keyword.ws ?? 0);
+    const safeDifficulty = Number(keyword.difficulty ?? 0);
+    const safeFw = Number(keyword.fw ?? 0);
+    const safeOpportunity = Number(keyword.opportunity ?? 0);
+    const safePosition = Number(keyword.currentPosition ?? 0);
+    const projectedTraffic = Number(keyword.projectedTraffic ?? 0);
+
+    entry.totalVolume += volume;
+    entry.totalProjectedTraffic += Number.isFinite(projectedTraffic) ? projectedTraffic : 0;
+    entry.weight += volume;
+    entry.weighted.ws += safeWs * volume;
+    entry.weighted.difficulty += safeDifficulty * volume;
+    entry.weighted.fw += safeFw * volume;
+    entry.weighted.opportunity += safeOpportunity * volume;
+    entry.weighted.position += safePosition * volume;
+  });
+
+  const results = Array.from(categories.values()).map((entry) => {
+    const weight = entry.weight || entry.totalVolume || 1;
+    const averageValue = (total) => (weight ? total / weight : 0);
+
+    const averageWs = clampNumber(averageValue(entry.weighted.ws), 0, 100);
+    const averageDifficulty = clampNumber(averageValue(entry.weighted.difficulty), 0, 100);
+    const averageFw = clampNumber(averageValue(entry.weighted.fw), 0.5, 3);
+    const averageOpportunity = clampNumber(
+      Math.round(averageValue(entry.weighted.opportunity)),
+      0,
+      100
+    );
+    const averagePosition = Math.max(1, Math.round(averageValue(entry.weighted.position)) || 1);
+
+    return {
+      id: entry.id,
+      topic: entry.label,
+      shortLabel: buildShortLabel({ cluster: entry.label }),
+      volume: entry.totalVolume,
+      difficulty: averageDifficulty,
+      fw: averageFw,
+      ws: averageWs,
+      intent: 'Mixed',
+      funnelStage: 'Combined',
+      opportunity: averageOpportunity,
+      currentPosition: averagePosition,
+      projectedTraffic: Math.max(0, Math.round(entry.totalProjectedTraffic)),
+      quickWin: false,
+      color: FUNNEL_STAGE_COLORS.default,
+    };
+  });
+
+  return results.sort((a, b) => a.topic.localeCompare(b.topic, 'fr', { sensitivity: 'base' }));
+};
+
 const computeCategoryBreakdown = (keywords) => {
   if (!Array.isArray(keywords) || keywords.length === 0) {
     return [];
@@ -166,7 +263,7 @@ const computeCategoryBreakdown = (keywords) => {
 
     if (!categoryMap.has(categoryLabel)) {
       categoryMap.set(categoryLabel, {
-        id: `category-${categoryLabel.toLowerCase().replace(/[^a-z0-9]+/gi, '-')}`,
+        id: buildCategoryId(categoryLabel),
         label: categoryLabel,
         total: 0,
         segments: new Map(),
@@ -204,6 +301,8 @@ const computeCategoryBreakdown = (keywords) => {
 };
 
 const buildDatasetFromKeywords = (keywords, stackedKeywords = keywords) => {
+  const aggregatedKeywords = aggregateKeywordsByCategory(keywords);
+
   const {
     keywords: positionedKeywords,
     maxVolume,
@@ -213,7 +312,7 @@ const buildDatasetFromKeywords = (keywords, stackedKeywords = keywords) => {
     yPadding,
     xRange,
     yRange,
-  } = layoutKeywords(keywords);
+  } = layoutKeywords(aggregatedKeywords);
 
   if (!positionedKeywords.length) {
     return {
