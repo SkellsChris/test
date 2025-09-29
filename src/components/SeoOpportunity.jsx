@@ -633,16 +633,6 @@ const SeoOpportunity = ({ rows }) => {
             represents the funnel stage.
           </p>
         </div>
-        <div className="seo-opportunity__summary" aria-live="polite">
-          <div>
-            <p className="seo-opportunity__summary-label">Average opportunity</p>
-            <p className="seo-opportunity__summary-value">{averageOpportunity}</p>
-          </div>
-          <div>
-            <p className="seo-opportunity__summary-label">Projected lift</p>
-            <p className="seo-opportunity__summary-value">{formatNumber(totalProjectedTraffic)} visits</p>
-          </div>
-        </div>
       </header>
 
       <div className="seo-opportunity__content">
