@@ -764,7 +764,7 @@ const SeoOpportunity = ({ rows }) => {
                   <text
                     className="seo-stacked-chart__axis-label"
                     x={stackedChartLeft + stackedChartInnerWidth / 2}
-                    y={stackedChartHeight - 32}
+                    y={stackedChartHeight - 12}
                     textAnchor="middle"
                   >
                     Keyword categories
