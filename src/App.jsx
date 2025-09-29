@@ -111,8 +111,8 @@ const App = () => {
   const pageMetadata = useMemo(
     () => ({
       overview: {
-        title: 'General statistics',
-        subtitle: 'Total system load',
+        title: 'Vue d’ensemble du pipeline SEO',
+        subtitle: 'Analyse croisée des mots-clés suivis et des opportunités identifiées.',
       },
       funnel: {
         title: 'Funnel Stages',
@@ -337,7 +337,7 @@ const App = () => {
   };
 
   const pages = [
-    { id: 'overview', label: 'Overview' },
+    { id: 'overview', label: 'Vue d’ensemble' },
     { id: 'funnel', label: 'Funnel Stages' },
     { id: 'seo', label: 'SEO Opportunity' },
     { id: 'sheet', label: 'Sheet' },
