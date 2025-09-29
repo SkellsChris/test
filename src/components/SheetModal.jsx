@@ -33,7 +33,7 @@ const DEFAULT_FUNNEL_STAGE = 'Awareness';
 const DEFAULT_FW_LABEL = FUNNEL_STAGE_TO_FW_LABEL[DEFAULT_FUNNEL_STAGE];
 const DEFAULT_FW_VALUE = FW_VALUE_BY_LABEL[DEFAULT_FW_LABEL];
 const WS_CPC_FLOOR = 1;
-const WS_DIFFICULTY_EXPONENT = 1;
+const WS_DIFFICULTY_EXPONENT = 1.2;
 const COLUMN_DEFS = [
   { key: 'primaryKeyword', label: 'Primary Keywords', type: 'text' },
   { key: 'secondaryKeyword', label: 'Secondary Keywords', type: 'text' },
