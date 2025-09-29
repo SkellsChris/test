@@ -804,7 +804,7 @@ const SeoOpportunity = ({ rows }) => {
             {stackedData.length ? (
               <svg
                 className="seo-stacked-chart__svg"
-                viewBox={`0 0 ${stackedChartWidth} ${stackedChartHeight}`}
+                viewBox="0 0 960 650"
                 preserveAspectRatio="xMidYMid meet"
                 role="presentation"
                 aria-hidden="true"
