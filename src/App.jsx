@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import TimeFilter from './components/TimeFilter.jsx';
-import OverviewCard from './components/OverviewCard.jsx';
-import PerformancePanel from './components/PerformancePanel.jsx';
-import TotalsPanel from './components/TotalsPanel.jsx';
+import OverviewSummary from './components/OverviewSummary.jsx';
 import SheetModal from './components/SheetModal.jsx';
 import FunnelStages from './components/FunnelStages.jsx';
 import SeoOpportunity from './components/SeoOpportunity.jsx';
@@ -92,6 +90,15 @@ const createInitialSheetsState = () => {
     'atlas-redesign': KEYWORD_SHEET_ROWS.map((row) => ({ ...row })),
   };
 };
+
+const STAGE_LABELS = {
+  Awareness: 'Sensibilisation',
+  Consideration: 'Considération',
+  Decision: 'Décision',
+};
+
+const formatInteger = (value) =>
+  new Intl.NumberFormat('fr-FR').format(Number.isFinite(Number(value)) ? Math.round(Number(value)) : 0);
 
 const App = () => {
   const { user } = useAuth();
@@ -355,6 +362,66 @@ const App = () => {
     [activeProject]
   );
 
+  const sheetSummary = useMemo(() => {
+    const totalKeywords = activeProjectRows.length;
+    const stageCounts = activeProjectRows.reduce((accumulator, row) => {
+      const stage = STAGE_LABELS[row.funnelStage] ? row.funnelStage : 'Awareness';
+      accumulator[stage] = (accumulator[stage] || 0) + 1;
+      return accumulator;
+    }, {});
+
+    const stageDistribution = Object.entries(STAGE_LABELS).map(([stage, label]) => {
+      const count = stageCounts[stage] || 0;
+      return {
+        label,
+        count,
+        share: totalKeywords > 0 ? `${Math.round((count / totalKeywords) * 100)} %` : '0 %',
+      };
+    });
+
+    stageDistribution.sort((a, b) => b.count - a.count);
+
+    const uniqueClusters = activeProjectRows.reduce((accumulator, row) => {
+      const clusterName = typeof row.cluster === 'string' ? row.cluster.trim() : '';
+      if (clusterName) {
+        accumulator.add(clusterName);
+      }
+      return accumulator;
+    }, new Set()).size;
+
+    const sample = activeProjectRows
+      .filter((row) => Number(row.priorityScore || row.opportunity || 0) >= 80 || Number(row.volume) >= 500)
+      .slice(0, 3);
+
+    if (sample.length < 3) {
+      activeProjectRows.slice(0, 3).forEach((row) => {
+        if (!sample.some((item) => item.primaryKeyword === row.primaryKeyword)) {
+          sample.push(row);
+        }
+      });
+    }
+
+    const normalisedSample = sample.slice(0, 3).map((row) => ({
+      primaryKeyword: row.primaryKeyword || row.keyword || 'Mot-clé sans titre',
+      cluster: (typeof row.cluster === 'string' && row.cluster.trim()) || 'Cluster sans nom',
+      funnelStage: STAGE_LABELS[row.funnelStage] || STAGE_LABELS.Awareness,
+      volume: formatInteger(row.volume),
+    }));
+
+    return {
+      totalKeywords,
+      uniqueClusters,
+      stageDistribution,
+      sample: normalisedSample,
+    };
+  }, [activeProjectRows]);
+
+  const handleNavigate = useCallback((nextPage) => {
+    if (nextPage && pages.some((page) => page.id === nextPage)) {
+      setActivePage(nextPage);
+    }
+  }, [pages]);
+
   const renderPage = () => {
     if (activePage === 'funnel') {
       return (
@@ -383,10 +450,14 @@ const App = () => {
     }
 
     return (
-      <main className="dashboard-grid">
-        <OverviewCard data={activeData.overview} />
-        <PerformancePanel data={activeData.performance} />
-        <TotalsPanel data={activeData.totals} />
+      <main className="overview-layout">
+        <OverviewSummary
+          overview={activeData.overview}
+          performance={activeData.performance}
+          totals={activeData.totals}
+          sheet={sheetSummary}
+          onNavigate={handleNavigate}
+        />
       </main>
     );
   };
