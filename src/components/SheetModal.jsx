@@ -17,6 +17,13 @@ const PAGE_SIZE_OPTIONS = [25, 50, 100];
 const INTENT_OPTIONS = ['Informational', 'Commercial', 'Transactional', 'Navigational'];
 const FUNNEL_OPTIONS = ['Awareness', 'Consideration', 'Decision'];
 const FW_OPTIONS = ['Low', 'Medium', 'High'];
+const INTENT_WEIGHT_BY_LABEL = {
+  Informational: 0.9,
+  Commercial: 1.0,
+  Transactional: 1.1,
+  Navigational: 0.95,
+};
+const DEFAULT_INTENT_WEIGHT = 1.0;
 const FUNNEL_STAGE_TO_FW_LABEL = {
   Awareness: 'Low',
   Consideration: 'Medium',
@@ -25,6 +32,8 @@ const FUNNEL_STAGE_TO_FW_LABEL = {
 const DEFAULT_FUNNEL_STAGE = 'Awareness';
 const DEFAULT_FW_LABEL = FUNNEL_STAGE_TO_FW_LABEL[DEFAULT_FUNNEL_STAGE];
 const DEFAULT_FW_VALUE = FW_VALUE_BY_LABEL[DEFAULT_FW_LABEL];
+const WS_CPC_FLOOR = 1;
+const WS_DIFFICULTY_EXPONENT = 1;
 const COLUMN_DEFS = [
   { key: 'primaryKeyword', label: 'Primary Keywords', type: 'text' },
   { key: 'secondaryKeyword', label: 'Secondary Keywords', type: 'text' },
@@ -266,6 +275,18 @@ const getFwDisplayValue = (row) => {
   return numeric !== null ? numeric.toFixed(1) : '';
 };
 
+const resolveIntentWeight = (intent) => {
+  if (!intent) {
+    return DEFAULT_INTENT_WEIGHT;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(INTENT_WEIGHT_BY_LABEL, intent)) {
+    return INTENT_WEIGHT_BY_LABEL[intent];
+  }
+
+  return DEFAULT_INTENT_WEIGHT;
+};
+
 const computeWsScore = (row) => {
   if (!row) {
     return 0;
@@ -276,17 +297,20 @@ const computeWsScore = (row) => {
   const difficulty = Number.isFinite(row.difficulty) ? row.difficulty : 0;
   const fwNumeric = getFwNumericValue(row);
   const effectiveFw = Number.isFinite(fwNumeric) && fwNumeric > 0 ? fwNumeric : 1;
+  const intentWeight = resolveIntentWeight(row.intent);
 
-  if (volume <= 0 || cpc <= 0) {
+  if (volume <= 0) {
     return 0;
   }
 
-  const denominator = 1 + difficulty;
+  const adjustedCpc = Math.max(cpc, WS_CPC_FLOOR);
+  const difficultyBase = 1 + difficulty / 100;
+  const denominator = Math.pow(difficultyBase, WS_DIFFICULTY_EXPONENT);
   if (!Number.isFinite(denominator) || denominator <= 0) {
     return 0;
   }
 
-  const rawScore = (volume * cpc * effectiveFw) / denominator;
+  const rawScore = (Math.sqrt(volume) * adjustedCpc * effectiveFw * intentWeight) / denominator;
 
   if (!Number.isFinite(rawScore)) {
     return 0;
