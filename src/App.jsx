@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import TimeFilter from './components/TimeFilter.jsx';
-import OverviewSummary from './components/OverviewSummary.jsx';
 import SheetModal from './components/SheetModal.jsx';
 import FunnelStages from './components/FunnelStages.jsx';
 import SeoOpportunity from './components/SeoOpportunity.jsx';
 import SheetView from './components/SheetView.jsx';
 import LogoutButton from './components/LogoutButton.jsx';
 import { KEYWORD_SHEET_ROWS } from './data/keywordSheet.js';
-import { DASHBOARD_DATA, TIMEFRAME_OPTIONS } from './data/dashboardData.js';
+import { TIMEFRAME_OPTIONS } from './data/dashboardData.js';
 import NewProjectModal from './components/NewProjectModal.jsx';
 import { createProject, deleteProject, fetchProjects } from './services/projects.js';
 import { isSupabaseConfigured } from './services/supabaseClient.js';
@@ -91,19 +90,10 @@ const createInitialSheetsState = () => {
   };
 };
 
-const STAGE_LABELS = {
-  Awareness: 'Sensibilisation',
-  Consideration: 'Considération',
-  Decision: 'Décision',
-};
-
-const formatInteger = (value) =>
-  new Intl.NumberFormat('fr-FR').format(Number.isFinite(Number(value)) ? Math.round(Number(value)) : 0);
-
 const App = () => {
   const { user } = useAuth();
   const [activeTimeframe, setActiveTimeframe] = useState('TY');
-  const [activePage, setActivePage] = useState('overview');
+  const [activePage, setActivePage] = useState('funnel');
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [activeProject, setActiveProject] = useState('atlas-redesign');
   const [projects, setProjects] = useState(DEFAULT_PROJECTS);
@@ -113,14 +103,8 @@ const App = () => {
   const [toast, setToast] = useState(null);
   const [isProjectDeleting, setIsProjectDeleting] = useState(false);
 
-  const activeData = DASHBOARD_DATA[activeTimeframe];
-
   const pageMetadata = useMemo(
     () => ({
-      overview: {
-        title: 'Vue d’ensemble du pipeline SEO',
-        subtitle: 'Analyse croisée des mots-clés suivis et des opportunités identifiées.',
-      },
       funnel: {
         title: 'Funnel Stages',
         subtitle: 'Visualise how prospects move through your revenue funnel.',
@@ -136,6 +120,8 @@ const App = () => {
     }),
     []
   );
+
+  const currentPageMetadata = pageMetadata[activePage] || pageMetadata.funnel;
 
   useEffect(() => {
     if (!toast) {
@@ -344,7 +330,6 @@ const App = () => {
   };
 
   const pages = [
-    { id: 'overview', label: 'Vue d’ensemble' },
     { id: 'funnel', label: 'Funnel Stages' },
     { id: 'seo', label: 'SEO Opportunity' },
     { id: 'sheet', label: 'Sheet' },
@@ -362,77 +347,7 @@ const App = () => {
     [activeProject]
   );
 
-  const sheetSummary = useMemo(() => {
-    const totalKeywords = activeProjectRows.length;
-    const stageCounts = activeProjectRows.reduce((accumulator, row) => {
-      const stage = STAGE_LABELS[row.funnelStage] ? row.funnelStage : 'Awareness';
-      accumulator[stage] = (accumulator[stage] || 0) + 1;
-      return accumulator;
-    }, {});
-
-    const stageDistribution = Object.entries(STAGE_LABELS).map(([stage, label]) => {
-      const count = stageCounts[stage] || 0;
-      return {
-        label,
-        count,
-        share: totalKeywords > 0 ? `${Math.round((count / totalKeywords) * 100)} %` : '0 %',
-      };
-    });
-
-    stageDistribution.sort((a, b) => b.count - a.count);
-
-    const uniqueClusters = activeProjectRows.reduce((accumulator, row) => {
-      const clusterName = typeof row.cluster === 'string' ? row.cluster.trim() : '';
-      if (clusterName) {
-        accumulator.add(clusterName);
-      }
-      return accumulator;
-    }, new Set()).size;
-
-    const sample = activeProjectRows
-      .filter((row) => Number(row.priorityScore || row.opportunity || 0) >= 80 || Number(row.volume) >= 500)
-      .slice(0, 3);
-
-    if (sample.length < 3) {
-      activeProjectRows.slice(0, 3).forEach((row) => {
-        if (!sample.some((item) => item.primaryKeyword === row.primaryKeyword)) {
-          sample.push(row);
-        }
-      });
-    }
-
-    const normalisedSample = sample.slice(0, 3).map((row) => ({
-      primaryKeyword: row.primaryKeyword || row.keyword || 'Mot-clé sans titre',
-      cluster: (typeof row.cluster === 'string' && row.cluster.trim()) || 'Cluster sans nom',
-      funnelStage: STAGE_LABELS[row.funnelStage] || STAGE_LABELS.Awareness,
-      volume: formatInteger(row.volume),
-    }));
-
-    return {
-      totalKeywords,
-      uniqueClusters,
-      stageDistribution,
-      sample: normalisedSample,
-    };
-  }, [activeProjectRows]);
-
-  const handleNavigate = useCallback((nextPage) => {
-    if (nextPage && pages.some((page) => page.id === nextPage)) {
-      setActivePage(nextPage);
-    }
-  }, [pages]);
-
   const renderPage = () => {
-    if (activePage === 'funnel') {
-      return (
-        <main className="funnel-layout">
-          <FunnelStages
-            rows={activeProjectRows}
-          />
-        </main>
-      );
-    }
-
     if (activePage === 'seo') {
       return (
         <main className="funnel-layout">
@@ -450,14 +365,8 @@ const App = () => {
     }
 
     return (
-      <main className="overview-layout">
-        <OverviewSummary
-          overview={activeData.overview}
-          performance={activeData.performance}
-          totals={activeData.totals}
-          sheet={sheetSummary}
-          onNavigate={handleNavigate}
-        />
+      <main className="funnel-layout">
+        <FunnelStages rows={activeProjectRows} />
       </main>
     );
   };
@@ -469,8 +378,8 @@ const App = () => {
       <div className="app-shell">
         <header className="page-header">
           <div className="page-header__content">
-            <h1>{pageMetadata[activePage].title}</h1>
-            <p>{pageMetadata[activePage].subtitle}</p>
+            <h1>{currentPageMetadata.title}</h1>
+            <p>{currentPageMetadata.subtitle}</p>
             <nav className="page-nav" aria-label="Dashboard sections">
               {pages.map((page) => {
                 const isActive = page.id === activePage;
@@ -552,7 +461,7 @@ const App = () => {
                 {!user ? <span className="project-switcher__hint">Veuillez vous connecter</span> : null}
               </div>
             </div>
-            {activePage === 'overview' || activePage === 'sheet' || activePage === 'seo' ? (
+            {activePage === 'sheet' || activePage === 'seo' ? (
               <>
                 <button type="button" className="sheet-trigger" onClick={() => setIsSheetOpen(true)}>
                   Sheet
