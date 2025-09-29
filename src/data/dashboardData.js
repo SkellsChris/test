@@ -1,348 +1,252 @@
-const BASE_OVERVIEW = {
-  title: 'Total system load',
-  subtitle: 'All figures are normal',
-  quantity: { label: 'Quantity of data' },
+import { KEYWORD_SHEET_ROWS } from './keywordSheet.js';
+import { SEO_OPPORTUNITY_KEYWORDS } from './seoOpportunity.js';
+
+const STAGES = [
+  { id: 'awareness', stage: 'Awareness', label: 'Sensibilisation' },
+  { id: 'consideration', stage: 'Consideration', label: 'Considération' },
+  { id: 'decision', stage: 'Decision', label: 'Décision' },
+];
+
+const STAGE_TREND_DIRECTION = {
+  Awareness: 'neutral',
+  Consideration: 'positive',
+  Decision: 'positive',
 };
 
-const BASE_PERFORMANCE = {
-  eyebrow: 'All figures are normal',
-  title: 'System performance',
-  centerLabel: 'Total earning',
+const STAGE_FALLBACK_LABEL = 'Non défini';
+
+const formatInteger = (value) =>
+  new Intl.NumberFormat('fr-FR').format(Number.isFinite(value) ? Math.round(value) : 0);
+
+const formatDecimal = (value, fractionDigits = 1) =>
+  new Intl.NumberFormat('fr-FR', {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).format(Number.isFinite(value) ? value : 0);
+
+const formatPercent = (value) => `${formatDecimal(value, 1)} %`;
+
+const sumBy = (items, selector) =>
+  items.reduce((total, item) => total + (Number(selector(item)) || 0), 0);
+
+const stageMetrics = STAGES.reduce(
+  (acc, { stage }) => {
+    acc.counts[stage] = 0;
+    acc.volumes[stage] = 0;
+    return acc;
+  },
+  { counts: {}, volumes: {} }
+);
+
+KEYWORD_SHEET_ROWS.forEach((row) => {
+  const safeStage = STAGES.some((definition) => definition.stage === row.funnelStage)
+    ? row.funnelStage
+    : STAGES[0].stage;
+
+  stageMetrics.counts[safeStage] += 1;
+  stageMetrics.volumes[safeStage] += Number(row.volume) || 0;
+});
+
+const pipelineTotalVolume = sumBy(KEYWORD_SHEET_ROWS, (row) => row.volume);
+const totalKeywords = KEYWORD_SHEET_ROWS.length;
+const transactionalKeywords = KEYWORD_SHEET_ROWS.filter((row) =>
+  ['Commercial', 'Transactional'].includes(row.intent)
+).length;
+const uniqueClusters = new Map();
+
+KEYWORD_SHEET_ROWS.forEach((row) => {
+  const clusterName = (row.cluster || row.primaryKeyword || '').trim() || 'Cluster sans nom';
+
+  if (!uniqueClusters.has(clusterName)) {
+    uniqueClusters.set(clusterName, {
+      name: clusterName,
+      totalVolume: 0,
+      keywordCount: 0,
+      stageVolumes: new Map(),
+    });
+  }
+
+  const cluster = uniqueClusters.get(clusterName);
+  cluster.totalVolume += Number(row.volume) || 0;
+  cluster.keywordCount += 1;
+
+  const stage = STAGES.find((definition) => definition.stage === row.funnelStage)?.stage || STAGES[0].stage;
+  cluster.stageVolumes.set(stage, (cluster.stageVolumes.get(stage) || 0) + (Number(row.volume) || 0));
+});
+
+const clusterSummaries = Array.from(uniqueClusters.values())
+  .map((cluster) => {
+    const stageEntries = Array.from(cluster.stageVolumes.entries());
+    if (!stageEntries.length) {
+      return { ...cluster, dominantStage: null };
+    }
+
+    const [dominantStage] = stageEntries.sort((a, b) => b[1] - a[1]);
+    return { ...cluster, dominantStage: dominantStage?.[0] || null };
+  })
+  .sort((a, b) => b.totalVolume - a.totalVolume);
+
+const seoStageVolumes = STAGES.reduce((acc, { stage }) => {
+  acc[stage] = 0;
+  return acc;
+}, {});
+
+SEO_OPPORTUNITY_KEYWORDS.forEach((keyword) => {
+  const stage = STAGES.find((definition) => definition.stage === keyword.funnelStage)?.stage || STAGES[0].stage;
+  seoStageVolumes[stage] += Number(keyword.volume) || 0;
+});
+
+const totalProjectedTraffic = sumBy(SEO_OPPORTUNITY_KEYWORDS, (keyword) => keyword.projectedTraffic);
+const averageOpportunity =
+  SEO_OPPORTUNITY_KEYWORDS.length > 0
+    ? sumBy(SEO_OPPORTUNITY_KEYWORDS, (keyword) => keyword.opportunity) / SEO_OPPORTUNITY_KEYWORDS.length
+    : 0;
+const averageCurrentPosition =
+  SEO_OPPORTUNITY_KEYWORDS.length > 0
+    ? sumBy(SEO_OPPORTUNITY_KEYWORDS, (keyword) => keyword.currentPosition) /
+      SEO_OPPORTUNITY_KEYWORDS.length
+    : 0;
+
+const quickWins = SEO_OPPORTUNITY_KEYWORDS.filter(
+  (keyword) => Number(keyword.opportunity) >= 85 && Number(keyword.currentPosition) > 3
+);
+const quickWinShare =
+  SEO_OPPORTUNITY_KEYWORDS.length > 0 ? (quickWins.length / SEO_OPPORTUNITY_KEYWORDS.length) * 100 : 0;
+
+const overviewData = {
+  title: 'Vue d\'ensemble SEO',
+  subtitle: 'Synthèse croisée du pipeline mots-clés et des opportunités.',
+  quantity: {
+    label: 'Mots-clés actifs',
+    value: formatInteger(totalKeywords),
+  },
+  rows: [
+    {
+      label: 'Sensibilisation (pipeline)',
+      value: `${formatInteger(stageMetrics.counts.Awareness || 0)} mots-clés`,
+    },
+    {
+      label: 'Considération (pipeline)',
+      value: `${formatInteger(stageMetrics.counts.Consideration || 0)} mots-clés`,
+    },
+    {
+      label: 'Décision (pipeline)',
+      value: `${formatInteger(stageMetrics.counts.Decision || 0)} mots-clés`,
+    },
+    {
+      label: 'Intent commercial / transactionnel',
+      value: `${formatInteger(transactionalKeywords)} mots-clés`,
+    },
+    {
+      label: 'Opportunités ≥ 85',
+      value: `${formatInteger(quickWins.length)} sujets`,
+    },
+    {
+      label: 'Trafic projeté (SEO)',
+      value: `${formatInteger(totalProjectedTraffic)} visites`,
+    },
+  ],
+  summary: {
+    label: 'Score moyen des opportunités',
+    value: `${formatDecimal(averageOpportunity, 1)} / 100`,
+    trend: {
+      direction: quickWinShare > 0 ? 'positive' : 'neutral',
+      text: `${formatPercent(quickWinShare)} à fort potentiel · Position moyenne #${formatDecimal(
+        averageCurrentPosition,
+        1
+      )}`,
+    },
+  },
 };
 
-const BASE_TOTALS = {
-  title: 'Total earning',
+const performanceData = {
+  eyebrow: 'Comparaison pipeline vs opportunités',
+  title: 'Volume par étape du tunnel',
+  centerLabel: 'Volume cumulé pipeline',
+  centerValue: `${formatInteger(pipelineTotalVolume)} recherches`,
+  categories: STAGES.map(({ id, label, stage }) => ({
+    key: id,
+    label,
+    amount: `${formatInteger(stageMetrics.volumes[stage] || 0)} recherches · ${formatInteger(
+      seoStageVolumes[stage] || 0
+    )} opp.`,
+  })),
+  datasets: [
+    {
+      id: 'pipeline',
+      label: 'Pipeline',
+      total: `${formatInteger(totalKeywords)} mots-clés`,
+      className: 'primary',
+      values: STAGES.reduce((acc, { id, stage }) => {
+        acc[id] = stageMetrics.volumes[stage] || 0;
+        return acc;
+      }, {}),
+    },
+    {
+      id: 'seo-opportunity',
+      label: 'Opportunités',
+      total: `${formatInteger(SEO_OPPORTUNITY_KEYWORDS.length)} sujets`,
+      className: 'secondary',
+      values: STAGES.reduce((acc, { id, stage }) => {
+        acc[id] = seoStageVolumes[stage] || 0;
+        return acc;
+      }, {}),
+    },
+  ],
 };
 
-export const TIMEFRAME_OPTIONS = [{ id: 'TY', label: 'Sheet', name: 'Sheet' }];
+const topCluster = clusterSummaries[0] || null;
+const topClusterStageLabel = topCluster?.dominantStage
+  ? STAGES.find((definition) => definition.stage === topCluster.dominantStage)?.label || STAGE_FALLBACK_LABEL
+  : STAGE_FALLBACK_LABEL;
+const topClusterTrendDirection = topCluster?.dominantStage
+  ? STAGE_TREND_DIRECTION[topCluster.dominantStage] || 'neutral'
+  : 'neutral';
+
+const totalsData = {
+  eyebrow: 'Synthèse clusters',
+  title: 'Clusters à prioriser',
+  highlight: {
+    value: topCluster ? `${formatInteger(topCluster.totalVolume)} recherches` : '0 recherche',
+    trend: {
+      direction: topClusterTrendDirection,
+      text: topCluster ? `${topClusterStageLabel} dominant` : STAGE_FALLBACK_LABEL,
+    },
+  },
+  list: clusterSummaries.slice(0, 6).map((cluster) => {
+    const dominantStageLabel = cluster.dominantStage
+      ? STAGES.find((definition) => definition.stage === cluster.dominantStage)?.label || STAGE_FALLBACK_LABEL
+      : STAGE_FALLBACK_LABEL;
+
+    const trendDirection = cluster.dominantStage
+      ? STAGE_TREND_DIRECTION[cluster.dominantStage] || 'neutral'
+      : 'neutral';
+
+    return {
+      label: cluster.name,
+      value: `${formatInteger(cluster.totalVolume)} recherches`,
+      trend: {
+        direction: trendDirection,
+        text: `${formatInteger(cluster.keywordCount)} mots-clés · ${dominantStageLabel}`,
+      },
+    };
+  }),
+  footer: {
+    label: 'Trafic projeté (SEO)',
+    value: `${formatInteger(totalProjectedTraffic)} visites`,
+    trend: {
+      direction: quickWinShare > 0 ? 'positive' : 'neutral',
+      text: `${formatPercent(quickWinShare)} des opportunités sont prioritaires`,
+    },
+  },
+};
+
+export const TIMEFRAME_OPTIONS = [{ id: 'TY', label: 'Vue globale', name: 'Vue globale' }];
 
 export const DASHBOARD_DATA = {
-  TM: {
-    overview: {
-      ...BASE_OVERVIEW,
-      quantity: { ...BASE_OVERVIEW.quantity, value: '12,540' },
-      rows: [
-        { label: 'Server', value: '214' },
-        { label: 'Clients', value: '864' },
-        { label: 'Payments', value: '612' },
-        { label: 'Responses', value: '435' },
-        { label: 'Users', value: '1,284' },
-        { label: 'Errors', value: '42' },
-      ],
-      summary: {
-        label: 'Total earning',
-        value: '$3,420',
-        trend: { direction: 'positive', text: '+2.3%' },
-      },
-    },
-    performance: {
-      ...BASE_PERFORMANCE,
-      centerValue: '$8,214',
-      categories: [
-        { key: 'design', label: 'Design', amount: '$2,104' },
-        { key: 'startup', label: 'Startup', amount: '$4,812' },
-        { key: 'business', label: 'Business', amount: '$8,214' },
-        { key: 'investment', label: 'Investment', amount: '$15,420' },
-        { key: 'product', label: 'Product', amount: '$3,624' },
-        { key: 'development', label: 'Development', amount: '$2,910' },
-      ],
-      datasets: [
-        {
-          id: 'business',
-          label: 'Business',
-          total: '12,420',
-          className: 'primary',
-          values: {
-            design: 45,
-            startup: 60,
-            business: 78,
-            investment: 52,
-            product: 58,
-            development: 48,
-          },
-        },
-        {
-          id: 'investment',
-          label: 'Investment',
-          total: '22,874',
-          className: 'secondary',
-          values: {
-            design: 38,
-            startup: 54,
-            business: 63,
-            investment: 88,
-            product: 66,
-            development: 52,
-          },
-        },
-      ],
-    },
-    totals: {
-      ...BASE_TOTALS,
-      eyebrow: 'Last week',
-      highlight: {
-        value: '$4,218',
-        trend: { direction: 'positive', text: '+3.1%' },
-      },
-      list: [
-        { label: 'Travel', value: '1,824', trend: { direction: 'positive', text: '+1.8%' } },
-        { label: 'Medical', value: '982', trend: { direction: 'positive', text: '+0.9%' } },
-        { label: 'Financial', value: '1,204', trend: { direction: 'neutral', text: '0.0%' } },
-        { label: 'E-commerce', value: '2,118', trend: { direction: 'positive', text: '+1.4%' } },
-        { label: 'Insurance', value: '1,042', trend: { direction: 'negative', text: '-0.8%' } },
-        { label: 'Marketing', value: '1,386', trend: { direction: 'positive', text: '+0.6%' } },
-      ],
-      footer: {
-        label: 'Total earning',
-        value: '$6,742',
-        trend: { direction: 'positive', text: 'Compared to last week 2.1%' },
-      },
-    },
-  },
-  TR: {
-    overview: {
-      ...BASE_OVERVIEW,
-      quantity: { ...BASE_OVERVIEW.quantity, value: '38,914' },
-      rows: [
-        { label: 'Server', value: '642' },
-        { label: 'Clients', value: '2,310' },
-        { label: 'Payments', value: '1,842' },
-        { label: 'Responses', value: '1,328' },
-        { label: 'Users', value: '3,972' },
-        { label: 'Errors', value: '168' },
-      ],
-      summary: {
-        label: 'Total earning',
-        value: '$9,860',
-        trend: { direction: 'positive', text: '+3.8%' },
-      },
-    },
-    performance: {
-      ...BASE_PERFORMANCE,
-      centerValue: '$18,964',
-      categories: [
-        { key: 'design', label: 'Design', amount: '$4,206' },
-        { key: 'startup', label: 'Startup', amount: '$12,318' },
-        { key: 'business', label: 'Business', amount: '$28,942' },
-        { key: 'investment', label: 'Investment', amount: '$64,228' },
-        { key: 'product', label: 'Product', amount: '$9,614' },
-        { key: 'development', label: 'Development', amount: '$6,482' },
-      ],
-      datasets: [
-        {
-          id: 'business',
-          label: 'Business',
-          total: '36,824',
-          className: 'primary',
-          values: {
-            design: 55,
-            startup: 72,
-            business: 84,
-            investment: 62,
-            product: 70,
-            development: 60,
-          },
-        },
-        {
-          id: 'investment',
-          label: 'Investment',
-          total: '92,416',
-          className: 'secondary',
-          values: {
-            design: 48,
-            startup: 66,
-            business: 74,
-            investment: 94,
-            product: 82,
-            development: 68,
-          },
-        },
-      ],
-    },
-    totals: {
-      ...BASE_TOTALS,
-      eyebrow: 'Last quarter',
-      highlight: {
-        value: '$9,412',
-        trend: { direction: 'positive', text: '+6.4%' },
-      },
-      list: [
-        { label: 'Travel', value: '3,642', trend: { direction: 'positive', text: '+2.2%' } },
-        { label: 'Medical', value: '1,926', trend: { direction: 'positive', text: '+1.4%' } },
-        { label: 'Financial', value: '4,318', trend: { direction: 'neutral', text: '+0.1%' } },
-        { label: 'E-commerce', value: '5,824', trend: { direction: 'positive', text: '+2.9%' } },
-        { label: 'Insurance', value: '3,210', trend: { direction: 'negative', text: '-1.2%' } },
-        { label: 'Marketing', value: '3,874', trend: { direction: 'positive', text: '+0.9%' } },
-      ],
-      footer: {
-        label: 'Total earning',
-        value: '$14,208',
-        trend: { direction: 'positive', text: 'Compared to last quarter 3.9%' },
-      },
-    },
-  },
   TY: {
-    overview: {
-      ...BASE_OVERVIEW,
-      quantity: { ...BASE_OVERVIEW.quantity, value: '98,642' },
-      rows: [
-        { label: 'Server', value: '1,536' },
-        { label: 'Clients', value: '6,420' },
-        { label: 'Payments', value: '3,624' },
-        { label: 'Responses', value: '2,435' },
-        { label: 'Users', value: '8,419' },
-        { label: 'Errors', value: '512' },
-      ],
-      summary: {
-        label: 'Total earning',
-        value: '$18,745',
-        trend: { direction: 'positive', text: '+4.6%' },
-      },
-    },
-    performance: {
-      ...BASE_PERFORMANCE,
-      centerValue: '$30,113',
-      categories: [
-        { key: 'design', label: 'Design', amount: '$10,402' },
-        { key: 'startup', label: 'Startup', amount: '$30,113' },
-        { key: 'business', label: 'Business', amount: '$79,464' },
-        { key: 'investment', label: 'Investment', amount: '$249,542' },
-        { key: 'product', label: 'Product', amount: '$33,501' },
-        { key: 'development', label: 'Development', amount: '$18,440' },
-      ],
-      datasets: [
-        {
-          id: 'business',
-          label: 'Business',
-          total: '79,464',
-          className: 'primary',
-          values: {
-            design: 62,
-            startup: 74,
-            business: 88,
-            investment: 65,
-            product: 70,
-            development: 58,
-          },
-        },
-        {
-          id: 'investment',
-          label: 'Investment',
-          total: '249,542',
-          className: 'secondary',
-          values: {
-            design: 55,
-            startup: 68,
-            business: 76,
-            investment: 98,
-            product: 82,
-            development: 66,
-          },
-        },
-      ],
-    },
-    totals: {
-      ...BASE_TOTALS,
-      eyebrow: 'Last month',
-      highlight: {
-        value: '$12,875',
-        trend: { direction: 'positive', text: '+8.3%' },
-      },
-      list: [
-        { label: 'Travel', value: '7,364', trend: { direction: 'positive', text: '+2.6%' } },
-        { label: 'Medical', value: '2,524', trend: { direction: 'positive', text: '+1.2%' } },
-        { label: 'Financial', value: '8,234', trend: { direction: 'neutral', text: '0.0%' } },
-        { label: 'E-commerce', value: '6,248', trend: { direction: 'positive', text: '+3.4%' } },
-        { label: 'Insurance', value: '4,122', trend: { direction: 'negative', text: '-1.5%' } },
-        { label: 'Marketing', value: '5,467', trend: { direction: 'positive', text: '+0.8%' } },
-      ],
-      footer: {
-        label: 'Total earning',
-        value: '$18,875',
-        trend: { direction: 'positive', text: 'Compared to last month 4.2%' },
-      },
-    },
-  },
-  ALL: {
-    overview: {
-      ...BASE_OVERVIEW,
-      quantity: { ...BASE_OVERVIEW.quantity, value: '256,824' },
-      rows: [
-        { label: 'Server', value: '4,128' },
-        { label: 'Clients', value: '18,942' },
-        { label: 'Payments', value: '11,804' },
-        { label: 'Responses', value: '8,642' },
-        { label: 'Users', value: '22,318' },
-        { label: 'Errors', value: '1,204' },
-      ],
-      summary: {
-        label: 'Total earning',
-        value: '$54,280',
-        trend: { direction: 'positive', text: '+6.9%' },
-      },
-    },
-    performance: {
-      ...BASE_PERFORMANCE,
-      centerValue: '$92,115',
-      categories: [
-        { key: 'design', label: 'Design', amount: '$24,820' },
-        { key: 'startup', label: 'Startup', amount: '$62,118' },
-        { key: 'business', label: 'Business', amount: '$164,842' },
-        { key: 'investment', label: 'Investment', amount: '$418,624' },
-        { key: 'product', label: 'Product', amount: '$88,412' },
-        { key: 'development', label: 'Development', amount: '$54,918' },
-      ],
-      datasets: [
-        {
-          id: 'business',
-          label: 'Business',
-          total: '184,624',
-          className: 'primary',
-          values: {
-            design: 68,
-            startup: 80,
-            business: 92,
-            investment: 76,
-            product: 84,
-            development: 72,
-          },
-        },
-        {
-          id: 'investment',
-          label: 'Investment',
-          total: '486,214',
-          className: 'secondary',
-          values: {
-            design: 60,
-            startup: 74,
-            business: 86,
-            investment: 99,
-            product: 90,
-            development: 78,
-          },
-        },
-      ],
-    },
-    totals: {
-      ...BASE_TOTALS,
-      eyebrow: 'Last year',
-      highlight: {
-        value: '$46,820',
-        trend: { direction: 'positive', text: '+12.4%' },
-      },
-      list: [
-        { label: 'Travel', value: '28,642', trend: { direction: 'positive', text: '+4.2%' } },
-        { label: 'Medical', value: '12,284', trend: { direction: 'positive', text: '+2.6%' } },
-        { label: 'Financial', value: '34,908', trend: { direction: 'neutral', text: '+0.3%' } },
-        { label: 'E-commerce', value: '26,418', trend: { direction: 'positive', text: '+5.1%' } },
-        { label: 'Insurance', value: '18,204', trend: { direction: 'negative', text: '-0.9%' } },
-        { label: 'Marketing', value: '22,618', trend: { direction: 'positive', text: '+1.5%' } },
-      ],
-      footer: {
-        label: 'Total earning',
-        value: '$112,420',
-        trend: { direction: 'positive', text: 'Compared to lifetime average 5.6%' },
-      },
-    },
+    overview: overviewData,
+    performance: performanceData,
+    totals: totalsData,
   },
 };
