@@ -2438,7 +2438,7 @@ body {
 
 .earnings-list__row {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   background: var(--surface-muted);
   border-radius: 18px;
@@ -2463,6 +2463,7 @@ body {
   justify-self: end;
   max-width: 100%;
   line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .totals-panel__footer {
